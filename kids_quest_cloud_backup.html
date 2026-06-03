@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KIDS QUEST CLOUD — Система Геймификации</title>
+    <!-- Подключаем Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+            --primary: #6366f1;
+            --secondary: #4f46e5;
+            --accent-xp: #10b981;
+            --accent-coin: #f59e0b;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-radius: 20px;
+            --shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent; 
+        }
+        
+        body { 
+            background-color: #cbd5e1; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+        }
+
+        /* ОБЩИЙ КОНТЕЙНЕР */
+        .app-container {
+            width: 100%; 
+            max-width: 420px; 
+            background: var(--bg-color); 
+            height: 100vh;
+            display: flex; 
+            flex-direction: column; 
+            position: relative; 
+            overflow: hidden; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .hero-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white; 
+            padding: 24px 20px; 
+            border-bottom-left-radius: 24px; 
+            border-bottom-right-radius: 24px;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+            z-index: 5;
+            position: relative;
+        }
+        .profile-row { display: flex; align-items: center; gap: 15px; margin-bottom: 16px; }
+        .avatar { width: 60px; height: 60px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .hero-info h1 { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+        .level-badge { background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 15px; font-size: 12px; font-weight: 700; display: inline-block; }
+
+        .xp-bar-wrapper { width: 100%; margin-top: 5px; }
+        .xp-text { font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: 600; opacity: 0.9; }
+        .xp-bar-outer { width: 100%; height: 10px; background: rgba(255,255,255,0.3); border-radius: 10px; overflow: hidden; }
+        .xp-bar-inner { height: 100%; background: var(--accent-xp); width: 0%; transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        
+        .header-bottom-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+        .stat-wallet { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 18px; }
+        
+        .btn-refresh { background: rgba(255,255,255,0.2); border: none; width: 32px; height: 32px; border-radius: 50%; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        .btn-refresh:active { background: rgba(255,255,255,0.4); }
+
+        /* Navigation (Tab Bar) */
+        .tab-bar { position: absolute; bottom: 0; width: 100%; height: 75px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #e2e8f0; border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 10; box-shadow: 0 -4px 10px rgba(0,0,0,0.02); }
+        .tab-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; font-weight: 600; cursor: pointer; gap: 4px; flex: 1; padding: 10px 0; }
+        .tab-item.active { color: var(--primary); font-weight: 700; }
+        .tab-icon { font-size: 20px; }
+
+        /* Content Area */
+        .content { flex: 1; padding: 20px; overflow-y: auto; padding-bottom: 90px; }
+        .view-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: var(--text-main); }
+
+        /* Cards */
+        .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
+        .card-details { display: flex; align-items: center; gap: 14px; flex: 1; }
+        .card-icon { font-size: 26px; width: 48px; height: 48px; background: #f1f5f9; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .card-text h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
+        .card-sub { font-size: 11px; font-weight: 700; display: flex; gap: 8px; }
+
+        .btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .btn:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+        .btn-small { padding: 6px 12px; font-size: 11px; border-radius: 10px; }
+        .btn-success { background: var(--accent-xp); }
+        .btn-danger { background: #ef4444; }
+        .btn-warning { background: var(--accent-coin); }
+
+        /* Admin UI */
+        .admin-nav { display: flex; gap: 10px; margin-bottom: 16px; background: #e2e8f0; padding: 4px; border-radius: 12px; }
+        .admin-nav-btn { flex: 1; background: transparent; border: none; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer; }
+        .admin-nav-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .admin-section { margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
+        .admin-section h4 { font-size: 12px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+        .form-group { margin-bottom: 12px; text-align: left; }
+        .form-group label { display: block; font-size: 11px; margin-bottom: 4px; font-weight: 700; color: var(--text-main); }
+        .form-group input[type="text"], .form-group input[type="number"], .form-group select { width: 100%; padding: 10px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 13px; color: var(--text-main); background: white; }
+        
+        .archive-item { background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 8px; font-size: 12px; border-left: 3px solid #cbd5e1; }
+        .archive-date { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Modals */
+        .modal { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); z-index: 1000; display: flex; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(4px); }
+        .modal-box { background: white; border-radius: 24px; padding: 24px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        
+        .loot-chest { font-size: 80px; cursor: pointer; transition: transform 0.2s; margin: 15px 0; user-select: none; text-align: center; }
+        .loot-chest.shake { animation: shake 0.5s infinite; }
+        @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(4deg); } 50% { transform: rotate(0deg); } 75% { transform: rotate(-4deg); } 100% { transform: rotate(0deg); } }
+
+        #cloud-status { font-size: 11px; color: rgba(255,255,255,0.7); font-weight: normal; }
+        .hidden { display: none !important; }
+
+        /* АДАПТИВНОСТЬ ДЛЯ ДЕСКТОПА */
+        @media (min-width: 768px) {
+            body { padding: 20px; }
+            .app-container { max-width: 1200px; height: 90vh; min-height: 600px; flex-direction: row; border-radius: 24px; }
+            .sidebar { width: 300px; background: linear-gradient(135deg, var(--primary), var(--secondary)); box-shadow: 4px 0 20px rgba(0,0,0,0.05); z-index: 10; }
+            .hero-header { box-shadow: none; border-radius: 0; background: transparent; flex: 1; }
+            .tab-bar { position: relative; width: 100%; height: auto; flex-direction: column; background: transparent; border-top: 1px solid rgba(255,255,255,0.1); border-radius: 0; box-shadow: none; padding: 20px 0; justify-content: flex-start; gap: 5px; }
+            .tab-item { flex-direction: row; justify-content: flex-start; padding: 15px 30px; width: 100%; color: rgba(255,255,255,0.6); font-size: 15px; gap: 15px; }
+            .tab-item.active { color: white; background: rgba(255,255,255,0.1); border-left: 4px solid var(--accent-coin); }
+            .content { flex: 1; padding: 40px; padding-bottom: 40px; }
+            #list-quests, #list-shop, #parent-pending-list, #parent-purchases-list, #parent-quest-manage, #parent-shop-manage { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+            .card { margin-bottom: 0; }
+            .admin-nav { max-width: 400px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- ЛЕВАЯ ПАНЕЛЬ -->
+        <aside class="sidebar">
+            <div class="hero-header">
+                <div class="profile-row">
+                    <div class="avatar">👦</div>
+                    <div class="hero-info">
+                        <h1 id="hero-name">Загрузка...</h1>
+                        <div class="level-badge" id="hero-level">Уровень ...</div>
+                    </div>
+                </div>
+                <div class="xp-bar-wrapper">
+                    <div class="xp-text"><span>Опыт (XP)</span> <span id="xp-numbers">0 / 0</span></div>
+                    <div class="xp-bar-outer"><div class="xp-bar-inner" id="xp-bar"></div></div>
+                </div>
+                <div class="header-bottom-row">
+                    <div class="stat-wallet">🪙 <span id="coin-balance">0</span></div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span id="cloud-status">Синхронизация...</span>
+                        <button class="btn-refresh" onclick="syncWithCloud()" title="Синхронизировать данные">🔄</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- НАВИГАЦИЯ -->
+            <div class="tab-bar">
+                <div class="tab-item active" onclick="switchTab('quests')">
+                    <span class="tab-icon">⚔️</span><span>Квесты</span>
+                </div>
+                <div class="tab-item" onclick="switchTab('shop')">
+                    <span class="tab-icon">🛒</span><span>Магазин</span>
+                </div>
+                <div class="tab-item" onclick="switchTab('parent')">
+                    <span class="tab-icon">🛡️</span><span>Родителям</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ПРАВАЯ ПАНЕЛЬ -->
+        <main class="content">
+            <!-- ЭКРАН ПРЕДУПРЕЖДЕНИЯ О КЛЮЧАХ -->
+            <div id="setup-notice" class="hidden" style="text-align:center; padding: 30px 10px;">
+                <span style="font-size:48px;">⚙️</span>
+                <h3 style="margin-top:15px; margin-bottom:10px;">Нужна настройка базы</h3>
+                <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
+                    Чтобы приложение работало через интернет на всех устройствах, откройте этот файл через любой текстовый редактор и вставьте ваши ключи <b>Supabase URL</b> и <b>Anon Key</b> внутри тега &lt;script&gt;.
+                </p>
+                <br>
+                <button class="btn" onclick="useOfflineFallback()">Использовать офлайн (LocalStorage)</button>
+            </div>
+
+            <!-- ВКЛАДКА 1: КВЕСТЫ -->
+            <div id="view-quests" class="tab-view">
+                <h2 class="view-title">Твои Задания</h2>
+                <div id="list-quests"></div>
+            </div>
+
+            <!-- ВКЛАДКА 2: МАГАЗИН -->
+            <div id="view-shop" class="tab-view hidden">
+                <h2 class="view-title">Магазин Наград</h2>
+                <div id="list-shop"></div>
+            </div>
+
+            <!-- ВКЛАДКА 3: РОДИТЕЛИ -->
+            <div id="view-parent" class="tab-view hidden">
+                <!-- Ввод PIN -->
+                <div id="parent-lock">
+                    <div style="text-align:center; padding: 40px 0;">
+                        <span style="font-size: 48px;">🔐</span>
+                        <h3 style="margin-top:10px;">Доступ ограничен</h3>
+                        <p style="color:var(--text-muted); margin: 6px 0 16px; font-size:13px;">Введите PIN-код для управления</p>
+                        <input type="tel" id="parent-pin" placeholder="****" maxlength="4" style="font-size: 24px; width: 130px; text-align:center; border: 2px solid #e2e8f0; border-radius: 12px; padding: 8px; letter-spacing: 4px;">
+                        <br><br>
+                        <button class="btn" style="width:130px;" onclick="checkPin()">Войти</button>
+                    </div>
+                </div>
+
+                <!-- Панель управления -->
+                <div id="parent-admin" class="hidden">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                        <h2 style="font-size:18px;">Админка</h2>
+                        <button class="btn btn-small btn-danger" onclick="lockAdmin()">🔒 Выйти</button>
+                    </div>
+
+                    <div class="admin-nav">
+                        <button class="admin-nav-btn active" id="btn-adm-main" onclick="switchAdminSub('main')">Управление</button>
+                        <button class="admin-nav-btn" id="btn-adm-archive" onclick="switchAdminSub('archive')">Архив</button>
+                    </div>
+
+                    <!-- ПОДВКЛАДКА: УПРАВЛЕНИЕ -->
+                    <div id="admin-sub-main">
+                        <!-- Настройки профиля -->
+                        <div class="admin-section">
+                            <h4>Профиль Героя</h4>
+                            <div class="form-group">
+                                <label>Имя ребенка</label>
+                                <input type="text" id="edit-child-name" onchange="updateChildName(this.value)" placeholder="Имя ребенка">
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <div class="form-group" style="flex:1;">
+                                    <label>Опыт для уровня (XP)</label>
+                                    <input type="number" id="edit-next-xp" onchange="updateNextXp(this.value)" placeholder="100">
+                                </div>
+                                <div class="form-group" style="flex:1;">
+                                    <label>Рост опыта с уровнем (%)</label>
+                                    <input type="number" id="edit-xp-percent" onchange="updateXpPercent(this.value)" placeholder="25">
+                                </div>
+                            </div>
+                            
+                            <div style="background:#f8fafc; padding:12px; border-radius:12px; margin-top:10px; border: 1px solid #e2e8f0;">
+                                <label style="font-size:11px; font-weight:700; display:block; margin-bottom:8px; color:var(--text-main);">Ручное начисление / списание</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="number" id="manual-val" value="10" style="width:70px; padding:6px; border:1px solid #ccc; border-radius:8px; font-size:14px; text-align:center;">
+                                    <button class="btn btn-small btn-success" style="flex:1;" onclick="manualAdd('xp')">+ / - XP</button>
+                                    <button class="btn btn-small btn-warning" style="flex:1;" onclick="manualAdd('coins')">+ / - Монеты</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- РЕЗЕРВНОЕ КОПИРОВАНИЕ -->
+                        <div class="admin-section">
+                            <h4>Резервное копирование (Экспорт / Импорт)</h4>
+                            <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+                                Вы можете сохранить все данные (прогресс, квесты, награды и архивы) в файл конфигурации JSON или восстановить систему из ранее сохраненного файла.
+                            </p>
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn btn-small btn-success" style="flex:1;" onclick="exportData()">📥 Экспортировать в файл</button>
+                                <button class="btn btn-small var(--primary)" style="flex:1; background-color:var(--primary);" onclick="triggerImport()">📤 Импортировать из файла</button>
+                            </div>
+                            <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importData(event)">
+                            <button class="btn btn-small btn-danger" style="width:100%; margin-top:14px;" onclick="resetProgress()">⚠️ Сбросить весь прогресс (Уровень и Монеты)</button>
+                        </div>
+
+                        <div class="admin-section">
+                            <h4>Проверка квестов</h4>
+                            <div id="parent-pending-list"></div>
+                        </div>
+
+                        <div class="admin-section">
+                            <h4>Лист выдачи наград</h4>
+                            <div id="parent-purchases-list"></div>
+                        </div>
+
+                        <div class="admin-section">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4>База Квестов</h4>
+                                <button class="btn btn-small" onclick="openQuestModal(null)">+ Добавить</button>
+                            </div>
+                            <div id="parent-quest-manage"></div>
+                        </div>
+
+                        <div class="admin-section">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4>База Наград (Магазин)</h4>
+                                <button class="btn btn-small" onclick="openShopModal(null)">+ Добавить</button>
+                            </div>
+                            <div id="parent-shop-manage"></div>
+                        </div>
+                        
+                        <div class="admin-section" style="border:none;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4>Пул лутбокса</h4>
+                                <button class="btn btn-small" onclick="addLootboxItem()">+ Добавить</button>
+                            </div>
+                            <div id="parent-lootbox-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- ПОДВКЛАДКА: АРХИВ -->
+                    <div id="admin-sub-archive" class="hidden">
+                        <div class="admin-section">
+                            <h4>Архив выполненных квестов</h4>
+                            <div id="archive-quests-list" style="max-height: 250px; overflow-y:auto;"></div>
+                        </div>
+                        <div class="admin-section" style="border:none;">
+                            <h4>Архив выданных наград</h4>
+                            <div id="archive-purchases-list" style="max-height: 250px; overflow-y:auto;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- МОДАЛКИ -->
+        <div id="modal-loot" class="modal hidden">
+            <div class="modal-box" style="text-align:center;">
+                <h2 id="loot-title" style="color:var(--secondary); font-size:22px; margin-bottom:5px;">НОВЫЙ УРОВЕНЬ!</h2>
+                <p style="font-size:14px; color:var(--text-muted);">Тебе полагается сундук с сокровищами!</p>
+                <div id="chest" class="loot-chest shake" onclick="openChest()">🎁</div>
+                <div id="loot-result" class="hidden">
+                    <div style="font-size:14px; color:var(--text-muted);">Твой приз:</div>
+                    <h3 id="loot-item-name" style="font-size: 20px; margin: 10px 0; color: var(--accent-coin);">Приз</h3>
+                    <button class="btn" style="width:100%; margin-top:10px;" onclick="closeLoot()">Забрать</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-add-quest" class="modal hidden">
+            <div class="modal-box">
+                <h2 id="mq-modal-title" style="font-size:18px; margin-bottom:16px;">Новый квест</h2>
+                <input type="hidden" id="nq-id">
+                <div class="form-group">
+                    <label>Название квеста</label>
+                    <input type="text" id="nq-title" placeholder="Например: Собрать Лего">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Иконка</label>
+                        <input type="text" id="nq-icon" value="🎯">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>XP</label>
+                        <input type="number" id="nq-xp" value="15">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Монеты</label>
+                        <input type="number" id="nq-coins" value="1">
+                    </div>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+                    <input type="checkbox" id="nq-onetime" style="width:18px; height:18px;" onchange="toggleQuestType('onetime')">
+                    <label for="nq-onetime" style="margin:0; font-size:12px; cursor:pointer; color:#ef4444; font-weight:bold;">
+                        Одноразовый (исчезнет после проверки)
+                    </label>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:8px; margin-bottom:12px;">
+                    <input type="checkbox" id="nq-repeat" style="width:18px; height:18px;" onchange="toggleQuestType('repeat')">
+                    <label for="nq-repeat" style="margin:0; font-size:12px; cursor:pointer;">
+                        Многоразовый (с лимитами)
+                    </label>
+                </div>
+                <div id="repeat-limits-group" style="background:#f8fafc; padding:12px; border-radius:12px; margin-bottom:12px; display:none;">
+                    <div class="form-group">
+                        <label>Макс. выполнений за период (0 — безлимит)</label>
+                        <input type="number" id="nq-max" value="0" min="0">
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Значение периода</label>
+                            <input type="number" id="nq-period-val" value="24" min="1">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Период обновления</label>
+                            <select id="nq-period-type">
+                                <option value="hours">В часах</option>
+                                <option value="days">В днях</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="btn btn-success" style="flex:1;" onclick="saveNewQuest()">Сохранить</button>
+                    <button class="btn" style="flex:1; background:#94a3b8;" onclick="closeQuestModal()">Отмена</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-add-shop" class="modal hidden">
+            <div class="modal-box">
+                <h2 id="ms-modal-title" style="font-size:18px; margin-bottom:16px;">Новая награда</h2>
+                <input type="hidden" id="ns-id">
+                <div class="form-group">
+                    <label>Название награды</label>
+                    <input type="text" id="ns-title" placeholder="Например: Поход в кино">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Иконка</label>
+                        <input type="text" id="ns-icon" value="🎁">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Цена (монеты 🪙)</label>
+                        <input type="number" id="ns-price" value="5" min="0">
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="btn btn-success" style="flex:1;" onclick="saveNewShopItem()">Сохранить</button>
+                    <button class="btn" style="flex:1; background:#94a3b8;" onclick="closeShopModal()">Отмена</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // КЛЮЧИ ПОДКЛЮЧЕНИЯ К СЕРВЕРУ SUPABASE
+        // ==========================================
+        const SUPABASE_URL = "https://pgnlmlzcilizjtsewywb.supabase.co/rest/v1/"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_OuQnp_86-2zlhAwMCnUGRg_uJKMSOs6";
+        // ==========================================
+
+        const PIN = "4681";
+        let isUnlocked = false;
+        let supabase = null;
+        let isOfflineMode = false;
+
+        const defaultState = {
+            childName: "Алексей", level: 1, xp: 0, nextLevelXp: 100, xpMultiplierPercent: 25, coins: 0,
+            quests: [
+                { id: 1, title: "Почистить зубы и умыться", icon: "🪥", xp: 10, coins: 1, pendingCount: 0, isOneTime: false, repeatable: false, maxPerPeriod: 0, periodValue: 24, periodType: 'hours', history: [] },
+                { id: 2, title: "Заправить кровать", icon: "🛏️", xp: 15, coins: 1, pendingCount: 0, isOneTime: false, repeatable: false, maxPerPeriod: 0, periodValue: 24, periodType: 'hours', history: [] }
+            ],
+            shop: [
+                { id: 101, title: "+15 минут игры", icon: "🎮", price: 3 },
+                { id: 102, title: "Мультик на выбор", icon: "🍿", price: 7 }
+            ],
+            purchases: [], archiveQuests: [], archivePurchases: [],
+            lootboxPool: [
+                { type: 'coins', value: 5, label: "5 бонусных монет 🪙" },
+                { type: 'xp', value: 30, label: "30 бонусного опыта ✨" }
+            ]
+        };
+
+        let state = defaultState;
+
+        window.onload = async function() {
+            if (SUPABASE_URL === "YOUR_SUPABASE_URL" || SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY") {
+                document.getElementById('setup-notice').classList.remove('hidden');
+                document.getElementById('list-quests').innerHTML = '<p style="text-align:center;color:gray;padding:20px;">Ожидание настройки подключения...</p>';
+            } else {
+                try {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    await syncWithCloud();
+                } catch (e) {
+                    console.error("Ошибка подключения к серверу, переход в офлайн:", e);
+                    useOfflineFallback();
+                }
+            }
+        };
+
+        function useOfflineFallback() {
+            isOfflineMode = true;
+            document.getElementById('setup-notice').classList.add('hidden');
+            document.getElementById('cloud-status').innerText = "📱 Офлайн режим";
+            state = JSON.parse(localStorage.getItem('kids_quest_cloud_local')) || defaultState;
+            render();
+        }
+
+        async function syncWithCloud() {
+            if (isOfflineMode || !supabase) return;
+            document.getElementById('cloud-status').innerText = "⏳ Загрузка...";
+            try {
+                const { data, error } = await supabase.from('family_quest').select('state').eq('id', 1).single();
+                if (error && error.code === 'PGRST116') {
+                    document.getElementById('cloud-status').innerText = "⚙️ Создание базы...";
+                    await supabase.from('family_quest').upsert({ id: 1, state: defaultState });
+                    state = defaultState;
+                } else if (data && data.state) {
+                    state = data.state;
+                }
+                document.getElementById('cloud-status').innerText = "☁️ В сети";
+            } catch (err) {
+                console.error("Ошибка синхронизации:", err);
+                document.getElementById('cloud-status').innerText = "❌ Ошибка сети";
+            }
+            render();
+        }
+
+        async function save() {
+            render();
+            if (isOfflineMode) {
+                localStorage.setItem('kids_quest_cloud_local', JSON.stringify(state));
+                return;
+            }
+            document.getElementById('cloud-status').innerText = "⏳ Сохранение...";
+            try {
+                const { error } = await supabase.from('family_quest').upsert({ id: 1, state: state });
+                if (error) document.getElementById('cloud-status').innerText = "❌ Ошибка сохранения";
+                else document.getElementById('cloud-status').innerText = "☁️ В сети";
+            } catch (e) {
+                document.getElementById('cloud-status').innerText = "❌ Ошибка сети";
+            }
+        }
+
+        // --- ЭКСПОРТ И ИМПОРТ (JSON) ---
+        function exportData() {
+            try {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+                const downloadAnchor = document.createElement('a');
+                const dateTag = new Date().toISOString().slice(0,10);
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `kids_quest_backup_${dateTag}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            } catch (e) {
+                alert("Ошибка экспорта данных: " + e.message);
+            }
+        }
+
+        function triggerImport() {
+            document.getElementById('import-file-input').click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    
+                    // Валидация структуры (минимальная проверка полей)
+                    if (importedState.childName && importedState.level !== undefined && Array.isArray(importedState.quests)) {
+                        if (confirm("Вы уверены? Импортированный файл полностью заменит текущие задания, уровни, баланс монет и архивы на сервере!")) {
+                            state = importedState;
+                            await save();
+                            alert("Данные успешно импортированы и синхронизированы!");
+                        }
+                    } else {
+                        alert("Ошибка: Неверная структура файла резервной копии.");
+                    }
+                } catch (err) {
+                    alert("Ошибка при чтении файла: Убедитесь, что это корректный JSON файл.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // сброс инпута
+        }
+
+        function getRecentActionsCount(q) {
+            if (!q.repeatable || !q.maxPerPeriod || q.maxPerPeriod <= 0) return 0;
+            const now = Date.now();
+            const periodMs = q.periodValue * (q.periodType === 'days' ? 24 : 1) * 60 * 60 * 1000;
+            const validHistory = (q.history || []).filter(t => (now - t) < periodMs);
+            return validHistory.length + (q.pendingCount || 0);
+        }
+
+        function render() {
+            // Профиль
+            document.getElementById('hero-name').innerText = state.childName || "Герой";
+            document.getElementById('edit-child-name').value = state.childName || "Герой";
+            document.getElementById('edit-next-xp').value = state.nextLevelXp || 100;
+            document.getElementById('edit-xp-percent').value = state.xpMultiplierPercent !== undefined ? state.xpMultiplierPercent : 25;
+            document.getElementById('hero-level').innerText = `Уровень ${state.level || 1}`;
+            document.getElementById('coin-balance').innerText = state.coins || 0;
+            document.getElementById('xp-numbers').innerText = `${state.xp || 0} / ${state.nextLevelXp || 100}`;
+            document.getElementById('xp-bar').style.width = `${Math.min(((state.xp || 0) / (state.nextLevelXp || 100)) * 100, 100)}%`;
+
+            // Ребенок: квесты
+            const qList = document.getElementById('list-quests');
+            qList.innerHTML = '';
+            
+            if(!state.quests || state.quests.length === 0) {
+                qList.innerHTML = '<p style="text-align:center; color:var(--text-muted); margin-top:20px; font-size:14px;">Пока нет доступных квестов.</p>';
+            } else {
+                state.quests.forEach(q => {
+                    const pCount = q.pendingCount || 0;
+                    const recentUsed = getRecentActionsCount(q);
+                    const hasLimit = q.repeatable && q.maxPerPeriod > 0;
+                    const isLimitReached = hasLimit && (recentUsed >= q.maxPerPeriod);
+                    const isDisabled = (!q.repeatable && pCount > 0) || isLimitReached;
+                    
+                    let btnText = 'Готово';
+                    let btnClass = '';
+                    if (!q.repeatable && pCount > 0) { btnText = 'Проверка'; btnClass = 'btn-success'; }
+                    if (isLimitReached) { btnText = 'Лимит'; btnClass = 'btn-warning'; }
+
+                    let limitInfo = '';
+                    if (hasLimit) {
+                        const unit = q.periodType === 'days' ? 'дн.' : 'ч.';
+                        limitInfo = `<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Лимит: ${recentUsed}/${q.maxPerPeriod} (за ${q.periodValue} ${unit})</div>`;
+                    } else if (q.repeatable && pCount > 0) {
+                        limitInfo = `<div style="font-size:11px; color:var(--accent-coin); margin-top:4px;">⏳ Ожидает проверки: ${pCount} шт.</div>`;
+                    }
+                    let oneTimeTag = q.isOneTime ? `<div style="font-size:11px; color:#ef4444; font-weight:700; margin-bottom:2px;">🔥 Одноразовый квест</div>` : '';
+
+                    qList.innerHTML += `
+                        <div class="card">
+                            <div class="card-details">
+                                <div class="card-icon">${q.icon || '🎯'}</div>
+                                <div class="card-text">
+                                    ${oneTimeTag}
+                                    <h3>${q.title}</h3>
+                                    <div class="card-sub"><span style="color:var(--accent-xp)">✨ +${q.xp}</span> <span style="color:var(--accent-coin)">🪙 +${q.coins}</span></div>
+                                    ${limitInfo}
+                                </div>
+                            </div>
+                            <button class="btn ${btnClass}" ${isDisabled ? 'disabled' : ''} onclick="submitQuest(${q.id})">${btnText}</button>
+                        </div>`;
+                });
+            }
+
+            // Ребенок: магазин
+            const sList = document.getElementById('list-shop');
+            sList.innerHTML = '';
+            if(state.shop) {
+                state.shop.forEach(s => {
+                    const canAfford = state.coins >= s.price;
+                    sList.innerHTML += `
+                        <div class="card">
+                            <div class="card-details">
+                                <div class="card-icon">${s.icon || '🎁'}</div>
+                                <div class="card-text"><h3>${s.title}</h3></div>
+                            </div>
+                            <button class="btn" style="background:var(--accent-coin)" ${canAfford ? '' : 'disabled'} onclick="buyItem(${s.id})">${s.price} 🪙</button>
+                        </div>`;
+                });
+            }
+
+            if (isUnlocked) {
+                // АДМИНКА: Проверка квестов
+                const pList = document.getElementById('parent-pending-list');
+                pList.innerHTML = '';
+                const pending = (state.quests || []).filter(q => q.pendingCount > 0);
+                if(pending.length === 0) pList.innerHTML = '<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:10px;">Нет задач на проверку</p>';
+                
+                pending.forEach(q => {
+                    const countTag = q.repeatable && q.pendingCount > 1 ? `<span style="background:var(--accent-coin); color:white; padding:2px 6px; border-radius:10px; font-size:11px; margin-left:6px;">x${q.pendingCount}</span>` : '';
+                    pList.innerHTML += `
+                        <div class="card" style="padding: 14px; margin-bottom:10px; display:block;">
+                            <div style="font-size:14px; margin-bottom:6px;">${q.icon || '🎯'} <b>${q.title}</b> ${countTag}</div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Награда: <span style="color:var(--accent-xp)">+${q.xp} XP</span> | <span style="color:var(--accent-coin)">+${q.coins} 🪙</span>${q.isOneTime ? ' <span style="color:red;">[Одноразовый]</span>':''}</div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-small btn-success" style="flex:1;" onclick="approveQuest(${q.id}, true)">✓ Одобрить 1 шт.</button>
+                                <button class="btn btn-small btn-danger" style="flex:1;" onclick="approveQuest(${q.id}, false)">✕</button>
+                            </div>
+                        </div>`;
+                });
+
+                // АДМИНКА: Лист выдачи наград
+                const purList = document.getElementById('parent-purchases-list');
+                purList.innerHTML = '';
+                if(!state.purchases || state.purchases.length === 0) purList.innerHTML = '<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:10px;">Пусто</p>';
+                else {
+                    state.purchases.forEach((p, idx) => {
+                        purList.innerHTML += `
+                            <div class="card" style="padding: 12px; margin-bottom:8px;">
+                                <div style="font-size:13px; flex:1;">${p.icon || '🎁'} <b>${p.title}</b> <br><span style="font-size:10px; color:var(--text-muted);">${p.date || ''}</span></div>
+                                <button class="btn btn-small" onclick="givePurchase(${idx})">Выдано</button>
+                            </div>`;
+                    });
+                }
+
+                // АДМИНКА: Списки управления базами
+                const qmList = document.getElementById('parent-quest-manage');
+                qmList.innerHTML = '';
+                state.quests.forEach(q => {
+                    let tags = q.isOneTime ? '<span style="font-size:10px; color:#ef4444;">[Однораз.]</span> ' : (q.repeatable ? '[Многораз.]' : '');
+                    qmList.innerHTML += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; background:#f8fafc; padding:8px 12px; border-radius:10px; margin-bottom:6px;">
+                            <span style="flex:1;">${q.icon} ${q.title} <br>${tags}</span>
+                            <div style="display:flex; gap:8px;">
+                                <span style="color:var(--primary); cursor:pointer; font-weight:bold;" onclick="openQuestModal(${q.id})">Изменить</span>
+                                <span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeQuest(${q.id})">Удалить</span>
+                            </div>
+                        </div>`;
+                });
+
+                const smList = document.getElementById('parent-shop-manage');
+                smList.innerHTML = '';
+                state.shop.forEach(s => {
+                    smList.innerHTML += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; background:#f8fafc; padding:8px 12px; border-radius:10px; margin-bottom:6px;">
+                            <span style="flex:1;">${s.icon || '🎁'} ${s.title} (${s.price}🪙)</span>
+                            <div style="display:flex; gap:8px;">
+                                <span style="color:var(--primary); cursor:pointer; font-weight:bold;" onclick="openShopModal(${s.id})">Изменить</span>
+                                <span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeShopItem(${s.id})">Удалить</span>
+                            </div>
+                        </div>`;
+                });
+
+                const lbList = document.getElementById('parent-lootbox-list');
+                lbList.innerHTML = '';
+                state.lootboxPool.forEach((item, idx) => {
+                    lbList.innerHTML += `
+                        <div style="display:flex; justify-content:space-between; font-size:12px; background:#f8fafc; padding:6px 12px; border-radius:8px; margin-bottom:4px;">
+                            <span>🎁 ${item.label}</span>
+                            <span style="color:red; cursor:pointer;" onclick="removeLootItem(${idx})">Удалить</span>
+                        </div>`;
+                });
+
+                renderArchives();
+            }
+        }
+
+        function renderArchives() {
+            const aQ = document.getElementById('archive-quests-list');
+            aQ.innerHTML = state.archiveQuests && state.archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            if(state.archiveQuests) {
+                state.archiveQuests.forEach(item => {
+                    aQ.innerHTML += `<div class="archive-item"><b>${item.icon} ${item.title}</b> (+✨${item.xp} | +🪙${item.coins})<div class="archive-date">${item.date}</div></div>`;
+                });
+            }
+
+            const aP = document.getElementById('archive-purchases-list');
+            aP.innerHTML = state.archivePurchases && state.archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            if(state.archivePurchases) {
+                state.archivePurchases.forEach(item => {
+                    aP.innerHTML += `<div class="archive-item"><b>${item.icon} ${item.title}</b><div class="archive-date">${item.date}</div></div>`;
+                });
+            }
+        }
+
+        // --- ДЕЙСТВИЯ ---
+        function submitQuest(id) {
+            const q = state.quests.find(x => x.id === id);
+            if(!q) return;
+            if (q.repeatable && q.maxPerPeriod > 0 && getRecentActionsCount(q) >= q.maxPerPeriod) return;
+            q.pendingCount = (q.pendingCount || 0) + 1;
+            save();
+        }
+
+        function approveQuest(id, isApproved) {
+            const q = state.quests.find(x => x.id === id);
+            if(!q || q.pendingCount <= 0) return;
+            q.pendingCount--;
+
+            if(isApproved) {
+                state.coins = (state.coins || 0) + q.coins;
+                state.xp = (state.xp || 0) + q.xp;
+                if (!q.history) q.history = [];
+                q.history.push(Date.now());
+
+                if(!state.archiveQuests) state.archiveQuests = [];
+                state.archiveQuests.unshift({ title: q.title, icon: q.icon, xp: q.xp, coins: q.coins, date: new Date().toLocaleString() });
+                if(state.archiveQuests.length > 50) state.archiveQuests.pop();
+                
+                if (q.isOneTime) {
+                    state.quests = state.quests.filter(x => x.id !== id);
+                }
+                checkLevelUp();
+            }
+            save();
+        }
+
+        function buyItem(id) {
+            const s = state.shop.find(x => x.id === id);
+            if(s && state.coins >= s.price) {
+                state.coins -= s.price;
+                if(!state.purchases) state.purchases = [];
+                state.purchases.push({ title: s.title, icon: s.icon, date: new Date().toLocaleString() });
+                alert("Успешно куплено! Родители увидят это в списке выдачи.");
+                save();
+            }
+        }
+
+        function givePurchase(idx) {
+            const p = state.purchases[idx];
+            if(!state.archivePurchases) state.archivePurchases = [];
+            state.archivePurchases.unshift({ title: p.title, icon: p.icon, date: new Date().toLocaleString() });
+            state.purchases.splice(idx, 1);
+            save();
+        }
+
+        function manualAdd(type) {
+            const valInput = document.getElementById('manual-val');
+            const amount = parseInt(valInput.value);
+            if (isNaN(amount) || amount === 0) return;
+
+            if (type === 'xp') {
+                state.xp = (state.xp || 0) + amount;
+                if (state.xp < 0) state.xp = 0;
+                checkLevelUp();
+            } else if (type === 'coins') {
+                state.coins = (state.coins || 0) + amount;
+                if (state.coins < 0) state.coins = 0;
+            }
+            valInput.value = '10';
+            save();
+        }
+
+        function checkLevelUp() {
+            let leveledUp = false;
+            while(state.xp >= state.nextLevelXp) {
+                state.level = (state.level || 1) + 1;
+                state.xp -= state.nextLevelXp;
+                const multiplier = 1 + (parseInt(state.xpMultiplierPercent || 25) / 100);
+                state.nextLevelXp = Math.round(state.nextLevelXp * multiplier);
+                leveledUp = true;
+            }
+            if (leveledUp) {
+                setTimeout(() => {
+                    document.getElementById('modal-loot').classList.remove('hidden');
+                    document.getElementById('chest').classList.add('shake');
+                }, 500);
+            }
+        }
+
+        function openChest() {
+            const chest = document.getElementById('chest');
+            if(!chest.classList.contains('shake')) return;
+            chest.classList.remove('shake');
+            chest.innerText = "✨🎁✨";
+            
+            if(!state.lootboxPool || state.lootboxPool.length === 0) {
+                document.getElementById('loot-item-name').innerText = "Пусто";
+                return;
+            }
+            const prize = state.lootboxPool[Math.floor(Math.random() * state.lootboxPool.length)];
+            document.getElementById('loot-item-name').innerText = prize.label;
+            
+            if(prize.type === 'coins') state.coins += prize.value;
+            if(prize.type === 'xp') state.xp += prize.value;
+            if(prize.type === 'item') {
+                if(!state.purchases) state.purchases = [];
+                state.purchases.push({ title: `СУНДУК: ${prize.label}`, icon: "🎁", date: new Date().toLocaleString() });
+            }
+            document.getElementById('loot-result').classList.remove('hidden');
+            save();
+        }
+
+        function closeLoot() {
+            document.getElementById('modal-loot').classList.add('hidden');
+            document.getElementById('loot-result').classList.add('hidden');
+            document.getElementById('chest').innerText = "🎁";
+        }
+
+        // --- МОДАЛКИ КВЕСТОВ ---
+        function toggleQuestType(type) {
+            const onetimeBox = document.getElementById('nq-onetime');
+            const repeatBox = document.getElementById('nq-repeat');
+            if (type === 'onetime' && onetimeBox.checked) repeatBox.checked = false;
+            if (type === 'repeat' && repeatBox.checked) onetimeBox.checked = false;
+            document.getElementById('repeat-limits-group').style.display = repeatBox.checked ? 'block' : 'none';
+        }
+
+        function openQuestModal(id = null) {
+            if (id !== null) {
+                const q = state.quests.find(x => x.id === id);
+                document.getElementById('mq-modal-title').innerText = "Редактировать квест";
+                document.getElementById('nq-id').value = q.id;
+                document.getElementById('nq-title').value = q.title;
+                document.getElementById('nq-icon').value = q.icon || "🎯";
+                document.getElementById('nq-xp').value = q.xp;
+                document.getElementById('nq-coins').value = q.coins;
+                document.getElementById('nq-onetime').checked = q.isOneTime || false;
+                document.getElementById('nq-repeat').checked = q.repeatable || false;
+                document.getElementById('nq-max').value = q.maxPerPeriod || 0;
+                document.getElementById('nq-period-val').value = q.periodValue || 24;
+                document.getElementById('nq-period-type').value = q.periodType || "hours";
+            } else {
+                document.getElementById('mq-modal-title').innerText = "Новый квест";
+                document.getElementById('nq-id').value = '';
+                document.getElementById('nq-title').value = '';
+                document.getElementById('nq-icon').value = '🎯';
+                document.getElementById('nq-xp').value = '15';
+                document.getElementById('nq-coins').value = '1';
+                document.getElementById('nq-onetime').checked = false;
+                document.getElementById('nq-repeat').checked = false;
+            }
+            toggleQuestType('none');
+            document.getElementById('modal-add-quest').classList.remove('hidden');
+        }
+
+        function closeQuestModal() { document.getElementById('modal-add-quest').classList.add('hidden'); }
+
+        function saveNewQuest() {
+            const title = document.getElementById('nq-title').value;
+            if(!title) return;
+            const id = document.getElementById('nq-id').value;
+            const isOneTime = document.getElementById('nq-onetime').checked;
+            const repeatable = document.getElementById('nq-repeat').checked;
+
+            const qData = {
+                id: id ? parseInt(id) : Date.now(),
+                title: title, icon: document.getElementById('nq-icon').value || "🎯",
+                xp: parseInt(document.getElementById('nq-xp').value) || 0,
+                coins: parseInt(document.getElementById('nq-coins').value) || 0,
+                isOneTime: isOneTime, repeatable: repeatable,
+                maxPerPeriod: repeatable ? (parseInt(document.getElementById('nq-max').value) || 0) : 0,
+                periodValue: repeatable ? (parseInt(document.getElementById('nq-period-val').value) || 24) : 24,
+                periodType: repeatable ? document.getElementById('nq-period-type').value : 'hours'
+            };
+
+            if (id) {
+                const idx = state.quests.findIndex(x => x.id === parseInt(id));
+                qData.pendingCount = state.quests[idx].pendingCount || 0;
+                qData.history = state.quests[idx].history || [];
+                state.quests[idx] = qData;
+            } else {
+                qData.pendingCount = 0; qData.history = [];
+                state.quests.push(qData);
+            }
+            closeQuestModal();
+            save();
+        }
+
+        // --- МОДАЛКИ НАГРАД ---
+        function openShopModal(id = null) {
+            if (id !== null) {
+                const s = state.shop.find(x => x.id === id);
+                document.getElementById('ms-modal-title').innerText = "Редактировать награду";
+                document.getElementById('ns-id').value = s.id;
+                document.getElementById('ns-title').value = s.title;
+                document.getElementById('ns-icon').value = s.icon || "🎁";
+                document.getElementById('ns-price').value = s.price;
+            } else {
+                document.getElementById('ms-modal-title').innerText = "Новая награда";
+                document.getElementById('ns-id').value = '';
+                document.getElementById('ns-title').value = '';
+                document.getElementById('ns-icon').value = '🎁';
+                document.getElementById('ns-price').value = '5';
+            }
+            document.getElementById('modal-add-shop').classList.remove('hidden');
+        }
+        function closeShopModal() { document.getElementById('modal-add-shop').classList.add('hidden'); }
+        
+        function saveNewShopItem() {
+            const title = document.getElementById('ns-title').value;
+            if(!title) return;
+            const id = document.getElementById('ns-id').value;
+            const sData = { id: id ? parseInt(id) : Date.now(), title, icon: document.getElementById('ns-icon').value || "🎁", price: parseInt(document.getElementById('ns-price').value) || 0 };
+            
+            if (id) {
+                const idx = state.shop.findIndex(x => x.id === parseInt(id));
+                state.shop[idx] = sData;
+            } else {
+                state.shop.push(sData);
+            }
+            closeShopModal();
+            save();
+        }
+
+        function removeShopItem(id) { if(confirm("Удалить награду?")) { state.shop = state.shop.filter(x => x.id !== id); save(); } }
+        function removeQuest(id) { if(confirm("Удалить квест?")) { state.quests = state.quests.filter(x => x.id !== id); save(); } }
+        function updateChildName(val) { state.childName = val; save(); }
+        function updateNextXp(val) { state.nextLevelXp = parseInt(val) || 100; save(); }
+        function updateXpPercent(val) { state.xpMultiplierPercent = parseInt(val) || 0; save(); }
+
+        function addLootboxItem() {
+            const label = prompt("Название приза:"); if(!label) return;
+            const type = prompt("Тип (coins, xp, item):", "item");
+            let value = 0;
+            if(type !== 'item') value = parseInt(prompt("Количество?", "10")) || 0;
+            state.lootboxPool.push({ type, label, value });
+            save();
+        }
+        function removeLootItem(idx) { state.lootboxPool.splice(idx, 1); save(); }
+
+        function resetProgress() {
+            if (prompt("Введите PIN-код для сброса:") === PIN) {
+                if(confirm("Обнулить уровень, монеты и архивы?")) {
+                    state.level = 1; state.xp = 0; state.coins = 0; state.nextLevelXp = 100;
+                    state.purchases = []; state.archiveQuests = []; state.archivePurchases = [];
+                    state.quests.forEach(q => { q.pendingCount = 0; q.history = []; });
+                    save();
+                }
+            }
+        }
+
+        // --- НАВИГАЦИЯ ---
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+            const items = document.querySelectorAll('.tab-item');
+            if(tab === 'quests') { items[0].classList.add('active'); document.getElementById('view-quests').classList.remove('hidden'); syncWithCloud(); } 
+            else if(tab === 'shop') { items[1].classList.add('active'); document.getElementById('view-shop').classList.remove('hidden'); syncWithCloud(); } 
+            else if(tab === 'parent') { items[2].classList.add('active'); document.getElementById('view-parent').classList.remove('hidden'); if(!isUnlocked) lockAdmin(); }
+        }
+
+        function switchAdminSub(tab) {
+            document.querySelectorAll('.admin-nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('admin-sub-main').classList.add('hidden');
+            document.getElementById('admin-sub-archive').classList.add('hidden');
+            if(tab === 'main') { document.getElementById('btn-adm-main').classList.add('active'); document.getElementById('admin-sub-main').classList.remove('hidden'); } 
+            else { document.getElementById('btn-adm-archive').classList.add('active'); document.getElementById('admin-sub-archive').classList.remove('hidden'); }
+        }
+
+        function checkPin() {
+            if(document.getElementById('parent-pin').value === PIN) {
+                isUnlocked = true;
+                document.getElementById('parent-lock').classList.add('hidden');
+                document.getElementById('parent-admin').classList.remove('hidden');
+                syncWithCloud();
+            } else { alert("Неверно!"); document.getElementById('parent-pin').value = ''; }
+        }
+
+        function lockAdmin() { isUnlocked = false; document.getElementById('parent-lock').classList.remove('hidden'); document.getElementById('parent-admin').classList.add('hidden'); document.getElementById('parent-pin').value = ''; }
+    </script>
+</body>
+</html>
