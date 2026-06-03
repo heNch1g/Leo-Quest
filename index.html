@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LEO QUEST CLOUD — Система Геймификации</title>
-    <!-- Favicon (Иконка сайта). По умолчанию Лев 🦁. Чтобы поставить свою картинку, замените этот тег на: <link rel="icon" href="ссылка_на_картинку.png"> -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦁</text></svg>">
-    
     <!-- Подключаем Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -36,9 +33,7 @@
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            /* Используем dvh (dynamic viewport height) для решения проблемы с адресной строкой мобильных браузеров */
             min-height: 100vh; 
-            min-height: 100dvh; 
         }
 
         /* ОБЩИЙ КОНТЕЙНЕР */
@@ -47,7 +42,6 @@
             max-width: 420px; 
             background: var(--bg-color); 
             height: 100vh;
-            height: 100dvh; /* Адаптация под мобильный интерфейс (адресную строку внизу) */
             display: flex; 
             flex-direction: column; 
             position: relative; 
@@ -207,7 +201,7 @@
                 </div>
             </div>
             
-            <div class="sidebar-version">v1.2.1</div>
+            <div class="sidebar-version">v1.2.0</div>
         </aside>
 
         <!-- ПРАВАЯ ПАНЕЛЬ -->
@@ -373,7 +367,7 @@
                 </div>
             </div>
 
-            <div class="app-version-footer content-version">v1.2.1</div>
+            <div class="app-version-footer content-version">v1.2.0</div>
         </main>
 
         <!-- МОДАЛКИ (Всплывающие окна) -->
@@ -477,7 +471,7 @@
             </div>
         </div>
 
-        <!-- МОДАЛЬНОЕ ОКНО: ЛУТБОКС -->
+        <!-- МОДАЛЬНОЕ ОКНО: ДОБАВЛЕНИЕ / РЕДАКТИРОВАНИЕ ПРЕДМЕТА ЛУТБОКСА -->
         <div id="modal-add-lootbox" class="modal hidden">
             <div class="modal-box">
                 <h2 id="ml-modal-title" style="font-size:18px; margin-bottom:16px;">Приз лутбокса</h2>
@@ -510,10 +504,9 @@
     <script>
         // ==========================================
         // КЛЮЧИ ПОДКЛЮЧЕНИЯ К СЕРВЕРУ SUPABASE
-        // Вставьте сюда ваши параметры из личного кабинета Supabase
         // ==========================================
-        const SUPABASE_URL = "YOUR_SUPABASE_URL"; 
-        const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+        const SUPABASE_URL = "https://pgnlmlzcilizjtsewywb.supabase.co"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_OuQnp_86-2zlhAwMCnUGRg_uJKMSOs6";
         // ==========================================
 
         const PIN = "4681";
@@ -521,6 +514,7 @@
         let dbClient = null;
         let isOfflineMode = false;
         
+        // Таймер авто-выхода (5 минут)
         let autoLogoutTimeout = null;
         const AUTO_LOGOUT_MS = 5 * 60 * 1000; 
 
@@ -546,6 +540,7 @@
 
         let state = defaultState;
 
+        // Инициализация при запуске
         window.onload = async function() {
             if (SUPABASE_URL === "YOUR_SUPABASE_URL" || SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY") {
                 document.getElementById('setup-notice').classList.remove('hidden');
@@ -562,6 +557,7 @@
             setupActivityTracking();
         };
 
+        // --- УПРАВЛЕНИЕ АВТОВЫХОДОМ ---
         function resetAutoLogoutTimer() {
             clearTimeout(autoLogoutTimeout);
             if (isUnlocked) {
@@ -588,6 +584,7 @@
             render();
         }
 
+        // Синхронизация данных с сервером
         async function syncWithCloud() {
             if (isOfflineMode || !dbClient) return;
             
@@ -634,6 +631,7 @@
             }
         }
 
+        // --- УПРАВЛЕНИЕ АВАТАРОМ ---
         function handleAvatarUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -671,6 +669,7 @@
             save();
         }
 
+        // --- ЭКСПОРТ И ИМПОРТ ---
         function exportData() {
             try {
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
@@ -851,7 +850,7 @@
                     });
                 }
 
-                // АДМИНКА: Списки управления базами
+                // АДМИНКА: База квестов (Опыт и жетоны рядом с названием)
                 const qmList = document.getElementById('parent-quest-manage');
                 qmList.innerHTML = '';
                 quests.forEach(q => {
@@ -861,12 +860,13 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; background:#f8fafc; padding:10px 12px; border-radius:10px; margin-bottom:6px;">
                             <span style="flex:1; font-weight:500;">${renderedIcon} <b>${q.title}</b> <span style="color:var(--text-muted); font-size:11px;">(+${q.xp}XP / +${q.coins}🪙)</span><br>${tags}</span>
                             <div style="display:flex; gap:8px;">
-                                <span style="color:var(--primary); cursor:pointer; font-weight:bold; font-size:11px;" onclick="openQuestModal(${q.id})">Изменить</span>
-                                <span style="color:red; cursor:pointer; font-weight:bold; font-size:11px;" onclick="removeQuest(${q.id})">Удалить</span>
+                                <span style="color:var(--primary); cursor:pointer; font-weight:bold;" onclick="openQuestModal(${q.id})">Изменить</span>
+                                <span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeQuest(${q.id})">Удалить</span>
                             </div>
                         </div>`;
                 });
 
+                // АДМИНКА: База наград
                 const smList = document.getElementById('parent-shop-manage');
                 smList.innerHTML = '';
                 shop.forEach(s => {
@@ -881,7 +881,7 @@
                         </div>`;
                 });
 
-                // Менеджер лутбокса
+                // АДМИНКА: Пул лутбокса
                 const lbList = document.getElementById('parent-lootbox-list');
                 lbList.innerHTML = '';
                 lootboxPool.forEach((item, idx) => {
@@ -895,21 +895,38 @@
                         </div>`;
                 });
 
-                // Архивы
-                const aQ = document.getElementById('archive-quests-list');
-                aQ.innerHTML = archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+                renderArchives();
+            }
+        }
+
+        function renderArchives() {
+            const aQ = document.getElementById('archive-quests-list');
+            aQ.innerHTML = archiveQuests && archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            if(archiveQuests) {
                 archiveQuests.forEach(item => {
                     let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
                     aQ.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b> (+✨${item.xp} | +🪙${item.coins})<div class="archive-date">${item.date}</div></div>`;
                 });
+            }
 
-                const aP = document.getElementById('archive-purchases-list');
-                aP.innerHTML = archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            const aP = document.getElementById('archive-purchases-list');
+            aP.innerHTML = archivePurchases && archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            if(archivePurchases) {
                 archivePurchases.forEach(item => {
                     let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
                     aP.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b><div class="archive-date">${item.date}</div></div>`;
                 });
             }
+        }
+
+        // --- Numpad Logic ---
+        function addPinDigit(digit) {
+            const input = document.getElementById('parent-pin');
+            if(input.value.length < 4) { input.value += digit; }
+        }
+        function clearPinDigit() {
+            const input = document.getElementById('parent-pin');
+            input.value = input.value.slice(0, -1);
         }
 
         // --- ДЕЙСТВИЯ ---
@@ -1240,19 +1257,10 @@
                 document.getElementById('parent-admin').classList.remove('hidden');
                 resetAutoLogoutTimer(); 
                 syncWithCloud();
-            } else { 
-                alert("Неверный код!"); 
-                document.getElementById('parent-pin').value = ''; 
-            }
+            } else { alert("Неверный код!"); document.getElementById('parent-pin').value = ''; }
         }
 
-        function lockAdmin() { 
-            isUnlocked = false; 
-            clearTimeout(autoLogoutTimeout);
-            document.getElementById('parent-lock').classList.remove('hidden'); 
-            document.getElementById('parent-admin').classList.add('hidden'); 
-            document.getElementById('parent-pin').value = ''; 
-        }
+        function lockAdmin() { isUnlocked = false; clearTimeout(autoLogoutTimeout); document.getElementById('parent-lock').classList.remove('hidden'); document.getElementById('parent-admin').classList.add('hidden'); document.getElementById('parent-pin').value = ''; }
     </script>
 </body>
 </html>
