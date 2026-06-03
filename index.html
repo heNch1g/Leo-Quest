@@ -273,8 +273,8 @@
                                 Вы можете сохранить все данные (прогресс, квесты, награды и архивы) в файл конфигурации JSON или восстановить систему из ранее сохраненного файла.
                             </p>
                             <div style="display:flex; gap:10px;">
-                                <button class="btn btn-small btn-success" style="flex:1;" onclick="exportData()">📥 Экспортировать в файл</button>
-                                <button class="btn btn-small" style="flex:1; background-color:var(--primary);" onclick="triggerImport()">📤 Импортировать из файла</button>
+                                <button class="btn btn-small btn-success" style="flex:1;" onclick="exportData()">📥 Экспортировать</button>
+                                <button class="btn btn-small" style="flex:1; background-color:var(--primary);" onclick="triggerImport()">📤 Импортировать</button>
                             </div>
                             <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importData(event)">
                             <button class="btn btn-small btn-danger" style="width:100%; margin-top:14px;" onclick="resetProgress()">⚠️ Сбросить весь прогресс (Уровень и Монеты)</button>
@@ -434,7 +434,6 @@
     <script>
         // ==========================================
         // КЛЮЧИ ПОДКЛЮЧЕНИЯ К СЕРВЕРУ SUPABASE
-        // Вставьте сюда ваши параметры из личного кабинета Supabase
         // ==========================================
         const SUPABASE_URL = "https://pgnlmlzcilizjtsewywb.supabase.co"; 
         const SUPABASE_ANON_KEY = "sb_publishable_OuQnp_86-2zlhAwMCnUGRg_uJKMSOs6";
@@ -501,7 +500,14 @@
                     await dbClient.from('family_quest').upsert({ id: 1, state: defaultState });
                     state = defaultState;
                 } else if (data && data.state) {
-                    state = data.state;
+                    // Обработка пустой базы, если она была создана как '{}'
+                    if (Object.keys(data.state).length === 0) {
+                        state = defaultState;
+                        save(); // Автоматически исправляем базу, заполняя ее дефолтом
+                    } else {
+                        // Объединяем полученные данные с дефолтными, чтобы избежать ошибок missing array
+                        state = { ...defaultState, ...data.state };
+                    }
                 }
                 document.getElementById('cloud-status').innerText = "☁️ В сети";
             } catch (err) {
@@ -563,7 +569,7 @@
                     const importedState = JSON.parse(e.target.result);
                     if (importedState.childName && importedState.level !== undefined && Array.isArray(importedState.quests)) {
                         if (confirm("Вы уверены? Импортированный файл полностью заменит текущие задания, уровни, баланс монет и архивы на сервере!")) {
-                            state = importedState;
+                            state = { ...defaultState, ...importedState };
                             await save();
                             alert("Данные успешно импортированы и синхронизированы!");
                         }
@@ -587,6 +593,14 @@
         }
 
         function render() {
+            // Защита от пустых массивов (bulletproofing)
+            const quests = state.quests || [];
+            const shop = state.shop || [];
+            const purchases = state.purchases || [];
+            const lootboxPool = state.lootboxPool || [];
+            const archiveQuests = state.archiveQuests || [];
+            const archivePurchases = state.archivePurchases || [];
+
             // Профиль
             document.getElementById('hero-name').innerText = state.childName || "Герой";
             document.getElementById('edit-child-name').value = state.childName || "Герой";
@@ -601,10 +615,10 @@
             const qList = document.getElementById('list-quests');
             qList.innerHTML = '';
             
-            if(!state.quests || state.quests.length === 0) {
+            if(quests.length === 0) {
                 qList.innerHTML = '<p style="text-align:center; color:var(--text-muted); margin-top:20px; font-size:14px;">Пока нет доступных квестов.</p>';
             } else {
-                state.quests.forEach(q => {
+                quests.forEach(q => {
                     const pCount = q.pendingCount || 0;
                     const recentUsed = getRecentActionsCount(q);
                     const hasLimit = q.repeatable && q.maxPerPeriod > 0;
@@ -645,25 +659,23 @@
             // Ребенок: магазин
             const sList = document.getElementById('list-shop');
             sList.innerHTML = '';
-            if(state.shop) {
-                state.shop.forEach(s => {
-                    const canAfford = state.coins >= s.price;
-                    sList.innerHTML += `
-                        <div class="card">
-                            <div class="card-details">
-                                <div class="card-icon">${s.icon || '🎁'}</div>
-                                <div class="card-text"><h3>${s.title}</h3></div>
-                            </div>
-                            <button class="btn" style="background:var(--accent-coin)" ${canAfford ? '' : 'disabled'} onclick="buyItem(${s.id})">${s.price} 🪙</button>
-                        </div>`;
-                });
-            }
+            shop.forEach(s => {
+                const canAfford = (state.coins || 0) >= s.price;
+                sList.innerHTML += `
+                    <div class="card">
+                        <div class="card-details">
+                            <div class="card-icon">${s.icon || '🎁'}</div>
+                            <div class="card-text"><h3>${s.title}</h3></div>
+                        </div>
+                        <button class="btn" style="background:var(--accent-coin)" ${canAfford ? '' : 'disabled'} onclick="buyItem(${s.id})">${s.price} 🪙</button>
+                    </div>`;
+            });
 
             if (isUnlocked) {
                 // АДМИНКА: Проверка квестов
                 const pList = document.getElementById('parent-pending-list');
                 pList.innerHTML = '';
-                const pending = (state.quests || []).filter(q => q.pendingCount > 0);
+                const pending = quests.filter(q => q.pendingCount > 0);
                 if(pending.length === 0) pList.innerHTML = '<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:10px;">Нет задач на проверку</p>';
                 
                 pending.forEach(q => {
@@ -682,9 +694,9 @@
                 // АДМИНКА: Лист выдачи наград
                 const purList = document.getElementById('parent-purchases-list');
                 purList.innerHTML = '';
-                if(!state.purchases || state.purchases.length === 0) purList.innerHTML = '<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:10px;">Пусто</p>';
+                if(purchases.length === 0) purList.innerHTML = '<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:10px;">Пусто</p>';
                 else {
-                    state.purchases.forEach((p, idx) => {
+                    purchases.forEach((p, idx) => {
                         purList.innerHTML += `
                             <div class="card" style="padding: 12px; margin-bottom:8px;">
                                 <div style="font-size:13px; flex:1;">${p.icon || '🎁'} <b>${p.title}</b> <br><span style="font-size:10px; color:var(--text-muted);">${p.date || ''}</span></div>
@@ -696,7 +708,7 @@
                 // АДМИНКА: Списки управления базами
                 const qmList = document.getElementById('parent-quest-manage');
                 qmList.innerHTML = '';
-                state.quests.forEach(q => {
+                quests.forEach(q => {
                     let tags = q.isOneTime ? '<span style="font-size:10px; color:#ef4444;">[Однораз.]</span> ' : (q.repeatable ? '[Многораз.]' : '');
                     qmList.innerHTML += `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; background:#f8fafc; padding:8px 12px; border-radius:10px; margin-bottom:6px;">
@@ -710,7 +722,7 @@
 
                 const smList = document.getElementById('parent-shop-manage');
                 smList.innerHTML = '';
-                state.shop.forEach(s => {
+                shop.forEach(s => {
                     smList.innerHTML += `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; background:#f8fafc; padding:8px 12px; border-radius:10px; margin-bottom:6px;">
                             <span style="flex:1;">${s.icon || '🎁'} ${s.title} (${s.price}🪙)</span>
@@ -724,7 +736,7 @@
                 // Менеджер лутбокса
                 const lbList = document.getElementById('parent-lootbox-list');
                 lbList.innerHTML = '';
-                state.lootboxPool.forEach((item, idx) => {
+                lootboxPool.forEach((item, idx) => {
                     lbList.innerHTML += `
                         <div style="display:flex; justify-content:space-between; font-size:12px; background:#f8fafc; padding:6px 12px; border-radius:8px; margin-bottom:4px;">
                             <span>🎁 ${item.label}</span>
@@ -732,23 +744,16 @@
                         </div>`;
                 });
 
-                renderArchives();
-            }
-        }
-
-        function renderArchives() {
-            const aQ = document.getElementById('archive-quests-list');
-            aQ.innerHTML = state.archiveQuests && state.archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
-            if(state.archiveQuests) {
-                state.archiveQuests.forEach(item => {
+                // Архивы
+                const aQ = document.getElementById('archive-quests-list');
+                aQ.innerHTML = archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+                archiveQuests.forEach(item => {
                     aQ.innerHTML += `<div class="archive-item"><b>${item.icon} ${item.title}</b> (+✨${item.xp} | +🪙${item.coins})<div class="archive-date">${item.date}</div></div>`;
                 });
-            }
 
-            const aP = document.getElementById('archive-purchases-list');
-            aP.innerHTML = state.archivePurchases && state.archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
-            if(state.archivePurchases) {
-                state.archivePurchases.forEach(item => {
+                const aP = document.getElementById('archive-purchases-list');
+                aP.innerHTML = archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+                archivePurchases.forEach(item => {
                     aP.innerHTML += `<div class="archive-item"><b>${item.icon} ${item.title}</b><div class="archive-date">${item.date}</div></div>`;
                 });
             }
@@ -756,6 +761,7 @@
 
         // --- ДЕЙСТВИЯ ---
         function submitQuest(id) {
+            if(!state.quests) return;
             const q = state.quests.find(x => x.id === id);
             if(!q) return;
             if (q.repeatable && q.maxPerPeriod > 0 && getRecentActionsCount(q) >= q.maxPerPeriod) return;
@@ -764,6 +770,7 @@
         }
 
         function approveQuest(id, isApproved) {
+            if(!state.quests) return;
             const q = state.quests.find(x => x.id === id);
             if(!q || q.pendingCount <= 0) return;
             q.pendingCount--;
@@ -787,8 +794,9 @@
         }
 
         function buyItem(id) {
+            if(!state.shop) return;
             const s = state.shop.find(x => x.id === id);
-            if(s && state.coins >= s.price) {
+            if(s && (state.coins || 0) >= s.price) {
                 state.coins -= s.price;
                 if(!state.purchases) state.purchases = [];
                 state.purchases.push({ title: s.title, icon: s.icon, date: new Date().toLocaleString() });
@@ -798,6 +806,7 @@
         }
 
         function givePurchase(idx) {
+            if(!state.purchases || !state.purchases[idx]) return;
             const p = state.purchases[idx];
             if(!state.archivePurchases) state.archivePurchases = [];
             state.archivePurchases.unshift({ title: p.title, icon: p.icon, date: new Date().toLocaleString() });
@@ -824,7 +833,7 @@
 
         function checkLevelUp() {
             let leveledUp = false;
-            while(state.xp >= state.nextLevelXp) {
+            while((state.xp || 0) >= (state.nextLevelXp || 100)) {
                 state.level = (state.level || 1) + 1;
                 state.xp -= state.nextLevelXp;
                 const multiplier = 1 + (parseInt(state.xpMultiplierPercent || 25) / 100);
@@ -852,8 +861,8 @@
             const prize = state.lootboxPool[Math.floor(Math.random() * state.lootboxPool.length)];
             document.getElementById('loot-item-name').innerText = prize.label;
             
-            if(prize.type === 'coins') state.coins += prize.value;
-            if(prize.type === 'xp') state.xp += prize.value;
+            if(prize.type === 'coins') state.coins = (state.coins || 0) + prize.value;
+            if(prize.type === 'xp') state.xp = (state.xp || 0) + prize.value;
             if(prize.type === 'item') {
                 if(!state.purchases) state.purchases = [];
                 state.purchases.push({ title: `СУНДУК: ${prize.label}`, icon: "🎁", date: new Date().toLocaleString() });
@@ -878,7 +887,7 @@
         }
 
         function openQuestModal(id = null) {
-            if (id !== null) {
+            if (id !== null && state.quests) {
                 const q = state.quests.find(x => x.id === id);
                 document.getElementById('mq-modal-title').innerText = "Редактировать квест";
                 document.getElementById('nq-id').value = q.id;
@@ -925,11 +934,15 @@
                 periodType: repeatable ? document.getElementById('nq-period-type').value : 'hours'
             };
 
+            if(!state.quests) state.quests = [];
+
             if (id) {
                 const idx = state.quests.findIndex(x => x.id === parseInt(id));
-                qData.pendingCount = state.quests[idx].pendingCount || 0;
-                qData.history = state.quests[idx].history || [];
-                state.quests[idx] = qData;
+                if (idx !== -1) {
+                    qData.pendingCount = state.quests[idx].pendingCount || 0;
+                    qData.history = state.quests[idx].history || [];
+                    state.quests[idx] = qData;
+                }
             } else {
                 qData.pendingCount = 0; qData.history = [];
                 state.quests.push(qData);
@@ -940,7 +953,7 @@
 
         // --- МОДАЛКИ НАГРАД ---
         function openShopModal(id = null) {
-            if (id !== null) {
+            if (id !== null && state.shop) {
                 const s = state.shop.find(x => x.id === id);
                 document.getElementById('ms-modal-title').innerText = "Редактировать награду";
                 document.getElementById('ns-id').value = s.id;
@@ -964,9 +977,11 @@
             const id = document.getElementById('ns-id').value;
             const sData = { id: id ? parseInt(id) : Date.now(), title, icon: document.getElementById('ns-icon').value || "🎁", price: parseInt(document.getElementById('ns-price').value) || 0 };
             
+            if(!state.shop) state.shop = [];
+
             if (id) {
                 const idx = state.shop.findIndex(x => x.id === parseInt(id));
-                state.shop[idx] = sData;
+                if(idx !== -1) state.shop[idx] = sData;
             } else {
                 state.shop.push(sData);
             }
@@ -974,8 +989,8 @@
             save();
         }
 
-        function removeShopItem(id) { if(confirm("Удалить награду?")) { state.shop = state.shop.filter(x => x.id !== id); save(); } }
-        function removeQuest(id) { if(confirm("Удалить квест?")) { state.quests = state.quests.filter(x => x.id !== id); save(); } }
+        function removeShopItem(id) { if(confirm("Удалить награду?") && state.shop) { state.shop = state.shop.filter(x => x.id !== id); save(); } }
+        function removeQuest(id) { if(confirm("Удалить квест?") && state.quests) { state.quests = state.quests.filter(x => x.id !== id); save(); } }
         function updateChildName(val) { state.childName = val; save(); }
         function updateNextXp(val) { state.nextLevelXp = parseInt(val) || 100; save(); }
         function updateXpPercent(val) { state.xpMultiplierPercent = parseInt(val) || 0; save(); }
@@ -985,17 +1000,18 @@
             const type = prompt("Тип (coins, xp, item):", "item");
             let value = 0;
             if(type !== 'item') value = parseInt(prompt("Количество?", "10")) || 0;
+            if(!state.lootboxPool) state.lootboxPool = [];
             state.lootboxPool.push({ type, label, value });
             save();
         }
-        function removeLootItem(idx) { state.lootboxPool.splice(idx, 1); save(); }
+        function removeLootItem(idx) { if(state.lootboxPool) { state.lootboxPool.splice(idx, 1); save(); } }
 
         function resetProgress() {
             if (prompt("Введите PIN-код для сброса:") === PIN) {
                 if(confirm("Обнулить уровень, монеты и архивы?")) {
                     state.level = 1; state.xp = 0; state.coins = 0; state.nextLevelXp = 100;
                     state.purchases = []; state.archiveQuests = []; state.archivePurchases = [];
-                    state.quests.forEach(q => { q.pendingCount = 0; q.history = []; });
+                    if(state.quests) state.quests.forEach(q => { q.pendingCount = 0; q.history = []; });
                     save();
                 }
             }
