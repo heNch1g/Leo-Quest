@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KIDS QUEST CLOUD — Система Геймификации</title>
+    <title>LEO QUEST CLOUD — Система Геймификации</title>
     <!-- Подключаем Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -150,7 +150,6 @@
 <body>
 
     <div class="app-container">
-        
         <!-- ЛЕВАЯ ПАНЕЛЬ -->
         <aside class="sidebar">
             <div class="hero-header">
@@ -241,7 +240,6 @@
 
                     <!-- ПОДВКЛАДКА: УПРАВЛЕНИЕ -->
                     <div id="admin-sub-main">
-                        <!-- Настройки профиля -->
                         <div class="admin-section">
                             <h4>Профиль Героя</h4>
                             <div class="form-group">
@@ -258,7 +256,6 @@
                                     <input type="number" id="edit-xp-percent" onchange="updateXpPercent(this.value)" placeholder="25">
                                 </div>
                             </div>
-                            
                             <div style="background:#f8fafc; padding:12px; border-radius:12px; margin-top:10px; border: 1px solid #e2e8f0;">
                                 <label style="font-size:11px; font-weight:700; display:block; margin-bottom:8px; color:var(--text-main);">Ручное начисление / списание</label>
                                 <div style="display:flex; gap:8px;">
@@ -277,7 +274,7 @@
                             </p>
                             <div style="display:flex; gap:10px;">
                                 <button class="btn btn-small btn-success" style="flex:1;" onclick="exportData()">📥 Экспортировать в файл</button>
-                                <button class="btn btn-small var(--primary)" style="flex:1; background-color:var(--primary);" onclick="triggerImport()">📤 Импортировать из файла</button>
+                                <button class="btn btn-small" style="flex:1; background-color:var(--primary);" onclick="triggerImport()">📤 Импортировать из файла</button>
                             </div>
                             <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importData(event)">
                             <button class="btn btn-small btn-danger" style="width:100%; margin-top:14px;" onclick="resetProgress()">⚠️ Сбросить весь прогресс (Уровень и Монеты)</button>
@@ -333,7 +330,7 @@
             </div>
         </main>
 
-        <!-- МОДАЛКИ -->
+        <!-- МОДАЛКИ (Всплывающие окна) -->
         <div id="modal-loot" class="modal hidden">
             <div class="modal-box" style="text-align:center;">
                 <h2 id="loot-title" style="color:var(--secondary); font-size:22px; margin-bottom:5px;">НОВЫЙ УРОВЕНЬ!</h2>
@@ -437,6 +434,7 @@
     <script>
         // ==========================================
         // КЛЮЧИ ПОДКЛЮЧЕНИЯ К СЕРВЕРУ SUPABASE
+        // Вставьте сюда ваши параметры из личного кабинета Supabase
         // ==========================================
         const SUPABASE_URL = "https://pgnlmlzcilizjtsewywb.supabase.co/rest/v1/"; 
         const SUPABASE_ANON_KEY = "sb_publishable_OuQnp_86-2zlhAwMCnUGRg_uJKMSOs6";
@@ -444,7 +442,7 @@
 
         const PIN = "4681";
         let isUnlocked = false;
-        let supabase = null;
+        let dbClient = null;
         let isOfflineMode = false;
 
         const defaultState = {
@@ -466,13 +464,14 @@
 
         let state = defaultState;
 
+        // Инициализация при запуске
         window.onload = async function() {
             if (SUPABASE_URL === "YOUR_SUPABASE_URL" || SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY") {
                 document.getElementById('setup-notice').classList.remove('hidden');
                 document.getElementById('list-quests').innerHTML = '<p style="text-align:center;color:gray;padding:20px;">Ожидание настройки подключения...</p>';
             } else {
                 try {
-                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                     await syncWithCloud();
                 } catch (e) {
                     console.error("Ошибка подключения к серверу, переход в офлайн:", e);
@@ -489,14 +488,17 @@
             render();
         }
 
+        // Синхронизация данных с сервером
         async function syncWithCloud() {
-            if (isOfflineMode || !supabase) return;
+            if (isOfflineMode || !dbClient) return;
+            
             document.getElementById('cloud-status').innerText = "⏳ Загрузка...";
             try {
-                const { data, error } = await supabase.from('family_quest').select('state').eq('id', 1).single();
+                const { data, error } = await dbClient.from('family_quest').select('state').eq('id', 1).single();
+                
                 if (error && error.code === 'PGRST116') {
                     document.getElementById('cloud-status').innerText = "⚙️ Создание базы...";
-                    await supabase.from('family_quest').upsert({ id: 1, state: defaultState });
+                    await dbClient.from('family_quest').upsert({ id: 1, state: defaultState });
                     state = defaultState;
                 } else if (data && data.state) {
                     state = data.state;
@@ -509,23 +511,29 @@
             render();
         }
 
+        // Сохранение изменений
         async function save() {
-            render();
+            render(); 
+            
             if (isOfflineMode) {
                 localStorage.setItem('kids_quest_cloud_local', JSON.stringify(state));
                 return;
             }
+
             document.getElementById('cloud-status').innerText = "⏳ Сохранение...";
             try {
-                const { error } = await supabase.from('family_quest').upsert({ id: 1, state: state });
-                if (error) document.getElementById('cloud-status').innerText = "❌ Ошибка сохранения";
-                else document.getElementById('cloud-status').innerText = "☁️ В сети";
+                const { error } = await dbClient.from('family_quest').upsert({ id: 1, state: state });
+                if (error) {
+                    document.getElementById('cloud-status').innerText = "❌ Ошибка сохранения";
+                } else {
+                    document.getElementById('cloud-status').innerText = "☁️ В сети";
+                }
             } catch (e) {
                 document.getElementById('cloud-status').innerText = "❌ Ошибка сети";
             }
         }
 
-        // --- ЭКСПОРТ И ИМПОРТ (JSON) ---
+        // --- ЭКСПОРТ И ИМПОРТ ---
         function exportData() {
             try {
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
@@ -553,8 +561,6 @@
             reader.onload = async function(e) {
                 try {
                     const importedState = JSON.parse(e.target.result);
-                    
-                    // Валидация структуры (минимальная проверка полей)
                     if (importedState.childName && importedState.level !== undefined && Array.isArray(importedState.quests)) {
                         if (confirm("Вы уверены? Импортированный файл полностью заменит текущие задания, уровни, баланс монет и архивы на сервере!")) {
                             state = importedState;
@@ -569,7 +575,7 @@
                 }
             };
             reader.readAsText(file);
-            event.target.value = ''; // сброс инпута
+            event.target.value = '';
         }
 
         function getRecentActionsCount(q) {
@@ -617,6 +623,7 @@
                     } else if (q.repeatable && pCount > 0) {
                         limitInfo = `<div style="font-size:11px; color:var(--accent-coin); margin-top:4px;">⏳ Ожидает проверки: ${pCount} шт.</div>`;
                     }
+                    
                     let oneTimeTag = q.isOneTime ? `<div style="font-size:11px; color:#ef4444; font-weight:700; margin-bottom:2px;">🔥 Одноразовый квест</div>` : '';
 
                     qList.innerHTML += `
@@ -667,7 +674,7 @@
                             <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Награда: <span style="color:var(--accent-xp)">+${q.xp} XP</span> | <span style="color:var(--accent-coin)">+${q.coins} 🪙</span>${q.isOneTime ? ' <span style="color:red;">[Одноразовый]</span>':''}</div>
                             <div style="display:flex; gap:8px;">
                                 <button class="btn btn-small btn-success" style="flex:1;" onclick="approveQuest(${q.id}, true)">✓ Одобрить 1 шт.</button>
-                                <button class="btn btn-small btn-danger" style="flex:1;" onclick="approveQuest(${q.id}, false)">✕</button>
+                                <button class="btn btn-small btn-danger" onclick="approveQuest(${q.id}, false)">✕</button>
                             </div>
                         </div>`;
                 });
@@ -714,6 +721,7 @@
                         </div>`;
                 });
 
+                // Менеджер лутбокса
                 const lbList = document.getElementById('parent-lootbox-list');
                 lbList.innerHTML = '';
                 state.lootboxPool.forEach((item, idx) => {
@@ -1017,7 +1025,7 @@
                 document.getElementById('parent-lock').classList.add('hidden');
                 document.getElementById('parent-admin').classList.remove('hidden');
                 syncWithCloud();
-            } else { alert("Неверно!"); document.getElementById('parent-pin').value = ''; }
+            } else { alert("Неверный код!"); document.getElementById('parent-pin').value = ''; }
         }
 
         function lockAdmin() { isUnlocked = false; document.getElementById('parent-lock').classList.remove('hidden'); document.getElementById('parent-admin').classList.add('hidden'); document.getElementById('parent-pin').value = ''; }
