@@ -67,7 +67,7 @@
             position: relative;
         }
         .profile-row { display: flex; align-items: center; gap: 15px; margin-bottom: 16px; }
-        .avatar { width: 60px; height: 60px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .avatar { width: 60px; height: 60px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; }
         .hero-info h1 { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
         .level-badge { background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 15px; font-size: 12px; font-weight: 700; display: inline-block; }
 
@@ -95,7 +95,7 @@
         /* Cards */
         .card { background: var(--card-bg); border-radius: var(--border-radius); padding: 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
         .card-details { display: flex; align-items: center; gap: 14px; flex: 1; }
-        .card-icon { font-size: 26px; width: 48px; height: 48px; background: #f1f5f9; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .card-icon { font-size: 26px; width: 48px; height: 48px; background: #f1f5f9; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; object-fit: cover; }
         .card-text h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
         .card-sub { font-size: 11px; font-weight: 700; display: flex; gap: 8px; }
 
@@ -128,17 +128,14 @@
         .loot-chest.shake { animation: shake 0.5s infinite; }
         @keyframes shake { 0% { transform: rotate(0deg); } 25% { transform: rotate(4deg); } 50% { transform: rotate(0deg); } 75% { transform: rotate(-4deg); } 100% { transform: rotate(0deg); } }
 
-        /* Футер версий */
-        .app-version-footer {
-            text-align: center; 
-            font-size: 11px; 
-            color: var(--text-muted); 
-            margin-top: 30px; 
-            margin-bottom: 10px; 
-            width: 100%;
-            opacity: 0.7;
-        }
+        /* Numpad Styles */
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 240px; margin: 20px auto 0; }
+        .numpad button { background: #fff; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 22px; font-weight: bold; color: var(--text-main); padding: 15px 0; cursor: pointer; transition: all 0.1s; }
+        .numpad button:active { background: #e2e8f0; transform: scale(0.95); }
+        .numpad .btn-clear { color: #ef4444; }
 
+        /* Футер версий */
+        .app-version-footer { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 30px; margin-bottom: 10px; width: 100%; opacity: 0.7; }
         #cloud-status { font-size: 11px; color: rgba(255,255,255,0.7); font-weight: normal; }
         .hidden { display: none !important; }
 
@@ -149,25 +146,15 @@
             .sidebar { width: 300px; background: linear-gradient(135deg, var(--primary), var(--secondary)); box-shadow: 4px 0 20px rgba(0,0,0,0.05); z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
             .hero-header { box-shadow: none; border-radius: 0; background: transparent; flex: none; }
             .tab-bar { position: relative; width: 100%; height: auto; flex-direction: column; background: transparent; border-top: 1px solid rgba(255,255,255,0.1); border-radius: 0; box-shadow: none; padding: 20px 0; justify-content: flex-start; gap: 5px; flex: 1; }
-            
-            /* ИСПРАВЛЕНИЕ: Отключаем flex: 1 для элементов меню на десктопе, чтобы они не растягивались на всю высоту сайдбара */
             .tab-item { flex: none; flex-direction: row; justify-content: flex-start; padding: 15px 30px; width: 100%; color: rgba(255,255,255,0.6); font-size: 15px; gap: 15px; }
-            
             .tab-item.active { color: white; background: rgba(255,255,255,0.1); border-left: 4px solid var(--accent-coin); }
             .content { flex: 1; padding: 40px; padding-bottom: 40px; }
             #list-quests, #list-shop, #parent-pending-list, #parent-purchases-list, #parent-quest-manage, #parent-shop-manage { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
             .card { margin-bottom: 0; }
             .admin-nav { max-width: 400px; }
-            
-            .sidebar-version {
-                padding: 20px 30px;
-                font-size: 11px;
-                color: rgba(255,255,255,0.4);
-                border-top: 1px solid rgba(255,255,255,0.05);
-            }
+            .sidebar-version { padding: 20px 30px; font-size: 11px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.05); }
             .content-version { display: none; }
         }
-        
         @media (max-width: 767px) {
             .sidebar-version { display: none; }
             .content-version { display: block; }
@@ -182,7 +169,7 @@
         <aside class="sidebar">
             <div class="hero-header">
                 <div class="profile-row">
-                    <div class="avatar">👦</div>
+                    <div class="avatar" id="hero-avatar">👦</div>
                     <div class="hero-info">
                         <h1 id="hero-name">Загрузка...</h1>
                         <div class="level-badge" id="hero-level">Уровень ...</div>
@@ -214,18 +201,16 @@
                 </div>
             </div>
             
-            <!-- Версия для десктопного сайдбара -->
-            <div class="sidebar-version">v1.0.1</div>
+            <div class="sidebar-version">v1.1.0</div>
         </aside>
 
         <!-- ПРАВАЯ ПАНЕЛЬ -->
         <main class="content">
-            <!-- ЭКРАН ПРЕДУПРЕЖДЕНИЯ О КЛЮЧАХ -->
             <div id="setup-notice" class="hidden" style="text-align:center; padding: 30px 10px;">
                 <span style="font-size:48px;">⚙️</span>
                 <h3 style="margin-top:15px; margin-bottom:10px;">Нужна настройка базы</h3>
                 <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
-                    Чтобы приложение работало через интернет на всех устройствах, откройте этот файл через любой текстовый редактор и вставьте ваши ключи <b>Supabase URL</b> и <b>Anon Key</b> внутри тега &lt;script&gt;.
+                    Чтобы приложение работало через интернет, откройте этот файл через редактор и вставьте ключи <b>Supabase</b> внутри тега &lt;script&gt;.
                 </p>
                 <br>
                 <button class="btn" onclick="useOfflineFallback()">Использовать офлайн (LocalStorage)</button>
@@ -243,17 +228,31 @@
                 <div id="list-shop"></div>
             </div>
 
-            <!-- ВКЛАДКА 3: РОДИТЕЛИ -->
+            <!-- ВКЛАДКА 3: РОДИТЕЛИ (АВТОРИЗАЦИЯ) -->
             <div id="view-parent" class="tab-view hidden">
-                <!-- Ввод PIN -->
                 <div id="parent-lock">
-                    <div style="text-align:center; padding: 40px 0;">
+                    <div style="text-align:center; padding: 20px 0;">
                         <span style="font-size: 48px;">🔐</span>
                         <h3 style="margin-top:10px;">Доступ ограничен</h3>
                         <p style="color:var(--text-muted); margin: 6px 0 16px; font-size:13px;">Введите PIN-код для управления</p>
-                        <input type="tel" id="parent-pin" placeholder="****" maxlength="4" style="font-size: 24px; width: 130px; text-align:center; border: 2px solid #e2e8f0; border-radius: 12px; padding: 8px; letter-spacing: 4px;">
-                        <br><br>
-                        <button class="btn" style="width:130px;" onclick="checkPin()">Войти</button>
+                        
+                        <input type="password" id="parent-pin" placeholder="****" maxlength="4" style="font-size: 24px; width: 130px; text-align:center; border: 2px solid #e2e8f0; border-radius: 12px; padding: 8px; letter-spacing: 8px;" readonly>
+                        
+                        <!-- Экранная клавиатура (Numpad) -->
+                        <div class="numpad">
+                            <button onclick="addPinDigit('1')">1</button>
+                            <button onclick="addPinDigit('2')">2</button>
+                            <button onclick="addPinDigit('3')">3</button>
+                            <button onclick="addPinDigit('4')">4</button>
+                            <button onclick="addPinDigit('5')">5</button>
+                            <button onclick="addPinDigit('6')">6</button>
+                            <button onclick="addPinDigit('7')">7</button>
+                            <button onclick="addPinDigit('8')">8</button>
+                            <button onclick="addPinDigit('9')">9</button>
+                            <button class="btn-clear" onclick="clearPinDigit()">⌫</button>
+                            <button onclick="addPinDigit('0')">0</button>
+                            <button style="background:var(--accent-xp); color:white; border-color:var(--accent-xp);" onclick="checkPin()">OK</button>
+                        </div>
                     </div>
                 </div>
 
@@ -273,6 +272,17 @@
                     <div id="admin-sub-main">
                         <div class="admin-section">
                             <h4>Профиль Героя</h4>
+                            
+                            <!-- Загрузка фото -->
+                            <div class="form-group" style="background:#f8fafc; padding:12px; border-radius:12px; margin-bottom:12px; border:1px solid #e2e8f0;">
+                                <label style="font-size:11px; font-weight:700; color:var(--text-main);">Аватар профиля</label>
+                                <div style="display:flex; gap:10px; margin-top:8px;">
+                                    <button class="btn btn-small" style="flex:1;" onclick="document.getElementById('avatar-upload').click()">📷 Загрузить фото</button>
+                                    <button class="btn btn-small btn-danger" style="flex:1;" onclick="removeAvatar()">🗑️ Удалить</button>
+                                </div>
+                                <input type="file" id="avatar-upload" accept="image/*" class="hidden" onchange="handleAvatarUpload(event)">
+                            </div>
+
                             <div class="form-group">
                                 <label>Имя ребенка</label>
                                 <input type="text" id="edit-child-name" onchange="updateChildName(this.value)" placeholder="Имя ребенка">
@@ -299,10 +309,7 @@
 
                         <!-- РЕЗЕРВНОЕ КОПИРОВАНИЕ -->
                         <div class="admin-section">
-                            <h4>Резервное копирование (Экспорт / Импорт)</h4>
-                            <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
-                                Вы можете сохранить все данные (прогресс, квесты, награды и архивы) в файл конфигурации JSON или восстановить систему из ранее сохраненного файла.
-                            </p>
+                            <h4>Резервное копирование</h4>
                             <div style="display:flex; gap:10px;">
                                 <button class="btn btn-small btn-success" style="flex:1;" onclick="exportData()">📥 Экспортировать</button>
                                 <button class="btn btn-small" style="flex:1; background-color:var(--primary);" onclick="triggerImport()">📤 Импортировать</button>
@@ -360,8 +367,7 @@
                 </div>
             </div>
 
-            <!-- Версия для мобильного скролла -->
-            <div class="app-version-footer content-version">Версия 1.0.1</div>
+            <div class="app-version-footer content-version">v1.1.0</div>
         </main>
 
         <!-- МОДАЛКИ (Всплывающие окна) -->
@@ -478,9 +484,14 @@
         let isUnlocked = false;
         let dbClient = null;
         let isOfflineMode = false;
+        
+        // Таймер авто-выхода (5 минут)
+        let autoLogoutTimeout = null;
+        const AUTO_LOGOUT_MS = 5 * 60 * 1000; 
 
         const defaultState = {
             childName: "Алексей", level: 1, xp: 0, nextLevelXp: 100, xpMultiplierPercent: 25, coins: 0,
+            avatarUrl: null, // Добавлено поле для фото
             quests: [
                 { id: 1, title: "Почистить зубы и умыться", icon: "🪥", xp: 10, coins: 1, pendingCount: 0, isOneTime: false, repeatable: false, maxPerPeriod: 0, periodValue: 24, periodType: 'hours', history: [] },
                 { id: 2, title: "Заправить кровать", icon: "🛏️", xp: 15, coins: 1, pendingCount: 0, isOneTime: false, repeatable: false, maxPerPeriod: 0, periodValue: 24, periodType: 'hours', history: [] }
@@ -512,7 +523,28 @@
                     useOfflineFallback();
                 }
             }
+            // Активируем трекинг активности
+            setupActivityTracking();
         };
+
+        // --- УПРАВЛЕНИЕ АВТОВЫХОДОМ ---
+        function resetAutoLogoutTimer() {
+            clearTimeout(autoLogoutTimeout);
+            if (isUnlocked) {
+                autoLogoutTimeout = setTimeout(() => {
+                    lockAdmin();
+                    switchTab('quests');
+                    alert("Сессия администратора была завершена из-за неактивности (5 минут).");
+                }, AUTO_LOGOUT_MS);
+            }
+        }
+
+        function setupActivityTracking() {
+            const events = ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll'];
+            events.forEach(evt => {
+                document.addEventListener(evt, resetAutoLogoutTimer, { passive: true });
+            });
+        }
 
         function useOfflineFallback() {
             isOfflineMode = true;
@@ -550,15 +582,12 @@
             render();
         }
 
-        // Сохранение изменений
         async function save() {
             render(); 
-            
             if (isOfflineMode) {
                 localStorage.setItem('kids_quest_cloud_local', JSON.stringify(state));
                 return;
             }
-
             document.getElementById('cloud-status').innerText = "⏳ Сохранение...";
             try {
                 const { error } = await dbClient.from('family_quest').upsert({ id: 1, state: state });
@@ -570,6 +599,46 @@
             } catch (e) {
                 document.getElementById('cloud-status').innerText = "❌ Ошибка сети";
             }
+        }
+
+        // --- УПРАВЛЕНИЕ АВАТАРОМ ---
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Сжимаем изображение на Canvas, чтобы не перегружать БД
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 150; // 150x150 px достаточно для аватарки
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                    } else {
+                        if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Сохраняем как Base64 строку с качеством 80%
+                    state.avatarUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    save();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeAvatar() {
+            state.avatarUrl = null;
+            save();
         }
 
         // --- ЭКСПОРТ И ИМПОРТ ---
@@ -588,9 +657,7 @@
             }
         }
 
-        function triggerImport() {
-            document.getElementById('import-file-input').click();
-        }
+        function triggerImport() { document.getElementById('import-file-input').click(); }
 
         function importData(event) {
             const file = event.target.files[0];
@@ -601,7 +668,7 @@
                 try {
                     const importedState = JSON.parse(e.target.result);
                     if (importedState.childName && importedState.level !== undefined && Array.isArray(importedState.quests)) {
-                        if (confirm("Вы уверены? Импортированный файл полностью заменит текущие задания, уровни, баланс монет и архивы на сервере!")) {
+                        if (confirm("Вы уверены? Импортированный файл полностью заменит текущие данные!")) {
                             state = { ...defaultState, ...importedState };
                             await save();
                             alert("Данные успешно импортированы и синхронизированы!");
@@ -643,6 +710,14 @@
             document.getElementById('xp-numbers').innerText = `${state.xp || 0} / ${state.nextLevelXp || 100}`;
             document.getElementById('xp-bar').style.width = `${Math.min(((state.xp || 0) / (state.nextLevelXp || 100)) * 100, 100)}%`;
 
+            // Рендер Аватара
+            const avatarEl = document.getElementById('hero-avatar');
+            if (state.avatarUrl) {
+                avatarEl.innerHTML = `<img src="${state.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            } else {
+                avatarEl.innerHTML = `👦`;
+            }
+
             // Ребенок: квесты
             const qList = document.getElementById('list-quests');
             qList.innerHTML = '';
@@ -672,10 +747,16 @@
                     
                     let oneTimeTag = q.isOneTime ? `<div style="font-size:11px; color:#ef4444; font-weight:700; margin-bottom:2px;">🔥 Одноразовый квест</div>` : '';
 
+                    // Проверка, является ли иконка ссылкой на изображение
+                    let renderedIcon = q.icon;
+                    if(q.icon && q.icon.startsWith('http')) {
+                        renderedIcon = `<img src="${q.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">`;
+                    }
+
                     qList.innerHTML += `
                         <div class="card">
                             <div class="card-details">
-                                <div class="card-icon">${q.icon || '🎯'}</div>
+                                <div class="card-icon">${renderedIcon || '🎯'}</div>
                                 <div class="card-text">
                                     ${oneTimeTag}
                                     <h3>${q.title}</h3>
@@ -693,10 +774,13 @@
             sList.innerHTML = '';
             shop.forEach(s => {
                 const canAfford = (state.coins || 0) >= s.price;
+                let renderedIcon = s.icon;
+                if(s.icon && s.icon.startsWith('http')) { renderedIcon = `<img src="${s.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">`; }
+
                 sList.innerHTML += `
                     <div class="card">
                         <div class="card-details">
-                            <div class="card-icon">${s.icon || '🎁'}</div>
+                            <div class="card-icon">${renderedIcon || '🎁'}</div>
                             <div class="card-text"><h3>${s.title}</h3></div>
                         </div>
                         <button class="btn" style="background:var(--accent-coin)" ${canAfford ? '' : 'disabled'} onclick="buyItem(${s.id})">${s.price} 🪙</button>
@@ -712,13 +796,14 @@
                 
                 pending.forEach(q => {
                     const countTag = q.repeatable && q.pendingCount > 1 ? `<span style="background:var(--accent-coin); color:white; padding:2px 6px; border-radius:10px; font-size:11px; margin-left:6px;">x${q.pendingCount}</span>` : '';
+                    let renderedIcon = q.icon && q.icon.startsWith('http') ? `<img src="${q.icon}" style="width:20px;height:20px;vertical-align:middle;border-radius:4px;">` : q.icon;
                     pList.innerHTML += `
                         <div class="card" style="padding: 14px; margin-bottom:10px; display:block;">
-                            <div style="font-size:14px; margin-bottom:6px;">${q.icon || '🎯'} <b>${q.title}</b> ${countTag}</div>
+                            <div style="font-size:14px; margin-bottom:6px;">${renderedIcon || '🎯'} <b>${q.title}</b> ${countTag}</div>
                             <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Награда: <span style="color:var(--accent-xp)">+${q.xp} XP</span> | <span style="color:var(--accent-coin)">+${q.coins} 🪙</span>${q.isOneTime ? ' <span style="color:red;">[Одноразовый]</span>':''}</div>
                             <div style="display:flex; gap:8px;">
                                 <button class="btn btn-small btn-success" style="flex:1;" onclick="approveQuest(${q.id}, true)">✓ Одобрить 1 шт.</button>
-                                <button class="btn btn-small btn-danger" style="flex:1;" onclick="approveQuest(${q.id}, false)">✕</button>
+                                <button class="btn btn-small btn-danger" style="flex:1;" onclick="approveQuest(${q.id}, false)">✕ Отклонить</button>
                             </div>
                         </div>`;
                 });
@@ -729,9 +814,10 @@
                 if(purchases.length === 0) purList.innerHTML = '<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:10px;">Пусто</p>';
                 else {
                     purchases.forEach((p, idx) => {
+                        let renderedIcon = p.icon && p.icon.startsWith('http') ? `<img src="${p.icon}" style="width:16px;height:16px;vertical-align:middle;border-radius:4px;">` : p.icon;
                         purList.innerHTML += `
                             <div class="card" style="padding: 12px; margin-bottom:8px;">
-                                <div style="font-size:13px; flex:1;">${p.icon || '🎁'} <b>${p.title}</b> <br><span style="font-size:10px; color:var(--text-muted);">${p.date || ''}</span></div>
+                                <div style="font-size:13px; flex:1;">${renderedIcon || '🎁'} <b>${p.title}</b> <br><span style="font-size:10px; color:var(--text-muted);">${p.date || ''}</span></div>
                                 <button class="btn btn-small" onclick="givePurchase(${idx})">Выдано</button>
                             </div>`;
                     });
@@ -742,9 +828,10 @@
                 qmList.innerHTML = '';
                 quests.forEach(q => {
                     let tags = q.isOneTime ? '<span style="font-size:10px; color:#ef4444;">[Однораз.]</span> ' : (q.repeatable ? '[Многораз.]' : '');
+                    let renderedIcon = q.icon && q.icon.startsWith('http') ? `<img src="${q.icon}" style="width:16px;height:16px;vertical-align:middle;border-radius:4px;">` : q.icon;
                     qmList.innerHTML += `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; background:#f8fafc; padding:8px 12px; border-radius:10px; margin-bottom:6px;">
-                            <span style="flex:1;">${q.icon} ${q.title} <br>${tags}</span>
+                            <span style="flex:1;">${renderedIcon} ${q.title} <br>${tags}</span>
                             <div style="display:flex; gap:8px;">
                                 <span style="color:var(--primary); cursor:pointer; font-weight:bold;" onclick="openQuestModal(${q.id})">Изменить</span>
                                 <span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeQuest(${q.id})">Удалить</span>
@@ -755,9 +842,10 @@
                 const smList = document.getElementById('parent-shop-manage');
                 smList.innerHTML = '';
                 shop.forEach(s => {
+                    let renderedIcon = s.icon && s.icon.startsWith('http') ? `<img src="${s.icon}" style="width:16px;height:16px;vertical-align:middle;border-radius:4px;">` : s.icon;
                     smList.innerHTML += `
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; background:#f8fafc; padding:8px 12px; border-radius:10px; margin-bottom:6px;">
-                            <span style="flex:1;">${s.icon || '🎁'} ${s.title} (${s.price}🪙)</span>
+                            <span style="flex:1;">${renderedIcon || '🎁'} ${s.title} (${s.price}🪙)</span>
                             <div style="display:flex; gap:8px;">
                                 <span style="color:var(--primary); cursor:pointer; font-weight:bold;" onclick="openShopModal(${s.id})">Изменить</span>
                                 <span style="color:red; cursor:pointer; font-weight:bold;" onclick="removeShopItem(${s.id})">Удалить</span>
@@ -780,15 +868,29 @@
                 const aQ = document.getElementById('archive-quests-list');
                 aQ.innerHTML = archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
                 archiveQuests.forEach(item => {
-                    aQ.innerHTML += `<div class="archive-item"><b>${item.icon} ${item.title}</b> (+✨${item.xp} | +🪙${item.coins})<div class="archive-date">${item.date}</div></div>`;
+                    let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
+                    aQ.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b> (+✨${item.xp} | +🪙${item.coins})<div class="archive-date">${item.date}</div></div>`;
                 });
 
                 const aP = document.getElementById('archive-purchases-list');
                 aP.innerHTML = archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
                 archivePurchases.forEach(item => {
-                    aP.innerHTML += `<div class="archive-item"><b>${item.icon} ${item.title}</b><div class="archive-date">${item.date}</div></div>`;
+                    let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
+                    aP.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b><div class="archive-date">${item.date}</div></div>`;
                 });
             }
+        }
+
+        // --- Numpad Logic ---
+        function addPinDigit(digit) {
+            const input = document.getElementById('parent-pin');
+            if(input.value.length < 4) {
+                input.value += digit;
+            }
+        }
+        function clearPinDigit() {
+            const input = document.getElementById('parent-pin');
+            input.value = input.value.slice(0, -1);
         }
 
         // --- ДЕЙСТВИЯ ---
@@ -1072,11 +1174,21 @@
                 isUnlocked = true;
                 document.getElementById('parent-lock').classList.add('hidden');
                 document.getElementById('parent-admin').classList.remove('hidden');
+                resetAutoLogoutTimer(); // Стартуем таймер активности
                 syncWithCloud();
-            } else { alert("Неверный код!"); document.getElementById('parent-pin').value = ''; }
+            } else { 
+                alert("Неверный код!"); 
+                document.getElementById('parent-pin').value = ''; 
+            }
         }
 
-        function lockAdmin() { isUnlocked = false; document.getElementById('parent-lock').classList.remove('hidden'); document.getElementById('parent-admin').classList.add('hidden'); document.getElementById('parent-pin').value = ''; }
+        function lockAdmin() { 
+            isUnlocked = false; 
+            clearTimeout(autoLogoutTimeout);
+            document.getElementById('parent-lock').classList.remove('hidden'); 
+            document.getElementById('parent-admin').classList.add('hidden'); 
+            document.getElementById('parent-pin').value = ''; 
+        }
     </script>
 </body>
 </html>
