@@ -113,7 +113,7 @@
 
         /* Admin UI */
         .admin-nav { display: flex; gap: 10px; margin-bottom: 16px; background: #e2e8f0; padding: 4px; border-radius: 12px; }
-        .admin-nav-btn { flex: 1; background: transparent; border: none; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer; }
+        .admin-nav-btn { flex: 1; background: transparent; border: none; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer; text-align: center; }
         .admin-nav-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
         .admin-section { margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
@@ -156,7 +156,7 @@
             .content { flex: 1; padding: 40px; padding-bottom: 40px; }
             #list-quests, #list-shop, #parent-pending-list, #parent-purchases-list, #parent-quest-manage, #parent-shop-manage { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
             .card { margin-bottom: 0; }
-            .admin-nav { max-width: 400px; }
+            .admin-nav { max-width: 500px; }
             .sidebar-version { padding: 20px 30px; font-size: 11px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.05); }
             .content-version { display: none; }
         }
@@ -206,7 +206,7 @@
                 </div>
             </div>
             
-            <div class="sidebar-version">v1.2.2</div>
+            <div class="sidebar-version">v1.3.0</div>
         </aside>
 
         <!-- ПРАВАЯ ПАНЕЛЬ -->
@@ -268,13 +268,64 @@
                         <button class="btn btn-small btn-danger" onclick="lockAdmin()">🔒 Выйти</button>
                     </div>
 
+                    <!-- Суб-навигация админки из трех вкладок -->
                     <div class="admin-nav">
                         <button class="admin-nav-btn active" id="btn-adm-main" onclick="switchAdminSub('main')">Управление</button>
                         <button class="admin-nav-btn" id="btn-adm-archive" onclick="switchAdminSub('archive')">Архив</button>
+                        <button class="admin-nav-btn" id="btn-adm-settings" onclick="switchAdminSub('settings')">Настройки</button>
                     </div>
 
-                    <!-- ПОДВКЛАДКА: УПРАВЛЕНИЕ -->
+                    <!-- ПОДВКЛАДКА 1: УПРАВЛЕНИЕ (Квесты, награды, проверки) -->
                     <div id="admin-sub-main">
+                        <div class="admin-section">
+                            <h4>Проверка квестов</h4>
+                            <div id="parent-pending-list"></div>
+                        </div>
+
+                        <div class="admin-section">
+                            <h4>Лист выдачи наград</h4>
+                            <div id="parent-purchases-list"></div>
+                        </div>
+
+                        <div class="admin-section">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4>База Квестов</h4>
+                                <button class="btn btn-small" onclick="openQuestModal(null)">+ Добавить</button>
+                            </div>
+                            <div id="parent-quest-manage"></div>
+                        </div>
+
+                        <div class="admin-section">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4>База Наград (Магазин)</h4>
+                                <button class="btn btn-small" onclick="openShopModal(null)">+ Добавить</button>
+                            </div>
+                            <div id="parent-shop-manage"></div>
+                        </div>
+                        
+                        <div class="admin-section" style="border:none;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4>Пул лутбокса</h4>
+                                <button class="btn btn-small" onclick="openLootboxModal(null)">+ Добавить</button>
+                            </div>
+                            <div id="parent-lootbox-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- ПОДВКЛАДКА 2: АРХИВ -->
+                    <div id="admin-sub-archive" class="hidden">
+                        <div class="admin-section">
+                            <h4>Архив выполненных квестов</h4>
+                            <div id="archive-quests-list" style="max-height: 250px; overflow-y:auto;"></div>
+                        </div>
+                        <div class="admin-section" style="border:none;">
+                            <h4>Архив выданных наград</h4>
+                            <div id="archive-purchases-list" style="max-height: 250px; overflow-y:auto;"></div>
+                        </div>
+                    </div>
+
+                    <!-- ПОДВКЛАДКА 3: НАСТРОЙКИ (Профиль и Бэкапы) -->
+                    <div id="admin-sub-settings" class="hidden">
                         <div class="admin-section">
                             <h4>Профиль Героя</h4>
                             
@@ -312,9 +363,11 @@
                             </div>
                         </div>
 
-                        <!-- РЕЗЕРВНОЕ КОПИРОВАНИЕ -->
-                        <div class="admin-section">
+                        <div class="admin-section" style="border:none;">
                             <h4>Резервное копирование</h4>
+                            <p style="font-size:11px; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+                                Вы можете сохранить все данные (прогресс, квесты, награды и архивы) в файл конфигурации JSON или восстановить систему из ранее сохраненного файла.
+                            </p>
                             <div style="display:flex; gap:10px;">
                                 <button class="btn btn-small btn-success" style="flex:1;" onclick="exportData()">📥 Экспортировать</button>
                                 <button class="btn btn-small" style="flex:1; background-color:var(--primary);" onclick="triggerImport()">📤 Импортировать</button>
@@ -322,57 +375,11 @@
                             <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importData(event)">
                             <button class="btn btn-small btn-danger" style="width:100%; margin-top:14px;" onclick="resetProgress()">⚠️ Сбросить весь прогресс (Уровень и Монеты)</button>
                         </div>
-
-                        <div class="admin-section">
-                            <h4>Проверка квестов</h4>
-                            <div id="parent-pending-list"></div>
-                        </div>
-
-                        <div class="admin-section">
-                            <h4>Лист выдачи наград</h4>
-                            <div id="parent-purchases-list"></div>
-                        </div>
-
-                        <div class="admin-section">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h4>База Квестов</h4>
-                                <button class="btn btn-small" onclick="openQuestModal(null)">+ Добавить</button>
-                            </div>
-                            <div id="parent-quest-manage"></div>
-                        </div>
-
-                        <div class="admin-section">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h4>База Наград (Магазин)</h4>
-                                <button class="btn btn-small" onclick="openShopModal(null)">+ Добавить</button>
-                            </div>
-                            <div id="parent-shop-manage"></div>
-                        </div>
-                        
-                        <div class="admin-section" style="border:none;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h4>Пул лутбокса</h4>
-                                <button class="btn btn-small" onclick="openLootboxModal(null)">+ Добавить</button>
-                            </div>
-                            <div id="parent-lootbox-list"></div>
-                        </div>
-                    </div>
-
-                    <!-- ПОДВКЛАДКА: АРХИВ -->
-                    <div id="admin-sub-archive" class="hidden">
-                        <div class="admin-section">
-                            <h4>Архив выполненных квестов</h4>
-                            <div id="archive-quests-list" style="max-height: 250px; overflow-y:auto;"></div>
-                        </div>
-                        <div class="admin-section" style="border:none;">
-                            <h4>Архив выданных наград</h4>
-                            <div id="archive-purchases-list" style="max-height: 250px; overflow-y:auto;"></div>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="app-version-footer content-version">v1.2.2</div>
+            <div class="app-version-footer content-version">v1.3.0</div>
         </main>
 
         <!-- МОДАЛКИ (Всплывающие окна) -->
@@ -389,7 +396,6 @@
             </div>
         </div>
 
-        <!-- МОДАЛЬНОЕ ОКНО: КВЕСТ -->
         <div id="modal-add-quest" class="modal hidden">
             <div class="modal-box">
                 <h2 id="mq-modal-title" style="font-size:18px; margin-bottom:16px;">Новый квест</h2>
@@ -450,7 +456,6 @@
             </div>
         </div>
 
-        <!-- МОДАЛЬНОЕ ОКНО: НАГРАДА -->
         <div id="modal-add-shop" class="modal hidden">
             <div class="modal-box">
                 <h2 id="ms-modal-title" style="font-size:18px; margin-bottom:16px;">Новая награда</h2>
@@ -476,7 +481,6 @@
             </div>
         </div>
 
-        <!-- МОДАЛЬНОЕ ОКНО: ЛУТБОКС -->
         <div id="modal-add-lootbox" class="modal hidden">
             <div class="modal-box">
                 <h2 id="ml-modal-title" style="font-size:18px; margin-bottom:16px;">Приз лутбокса</h2>
@@ -509,7 +513,6 @@
     <script>
         // ==========================================
         // КЛЮЧИ ПОДКЛЮЧЕНИЯ К СЕРВЕРУ SUPABASE
-        // Вставьте сюда ваши параметры из личного кабинета Supabase
         // ==========================================
         const SUPABASE_URL = "https://pgnlmlzcilizjtsewywb.supabase.co"; 
         const SUPABASE_ANON_KEY = "sb_publishable_OuQnp_86-2zlhAwMCnUGRg_uJKMSOs6";
@@ -561,7 +564,6 @@
             setupActivityTracking();
         };
 
-        // --- УПРАВЛЕНИЕ АВТОВЫХОДОМ ---
         function resetAutoLogoutTimer() {
             clearTimeout(autoLogoutTimeout);
             if (isUnlocked) {
@@ -580,12 +582,9 @@
             });
         }
 
-        // --- NUMPAD И PIN ---
         function addPinDigit(digit) {
             const input = document.getElementById('parent-pin');
-            if(input.value.length < 4) {
-                input.value += digit;
-            }
+            if(input.value.length < 4) { input.value += digit; }
         }
 
         function clearPinDigit() {
@@ -880,6 +879,7 @@
                         </div>`;
                 });
 
+                // АДМИНКА: База наград
                 const smList = document.getElementById('parent-shop-manage');
                 smList.innerHTML = '';
                 shop.forEach(s => {
@@ -908,16 +908,23 @@
                         </div>`;
                 });
 
-                // Архивы
-                const aQ = document.getElementById('archive-quests-list');
-                aQ.innerHTML = archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+                renderArchives();
+            }
+        }
+
+        function renderArchives() {
+            const aQ = document.getElementById('archive-quests-list');
+            aQ.innerHTML = archiveQuests && archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            if(archiveQuests) {
                 archiveQuests.forEach(item => {
                     let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
                     aQ.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b> (+✨${item.xp} | +🪙${item.coins})<div class="archive-date">${item.date}</div></div>`;
                 });
+            }
 
-                const aP = document.getElementById('archive-purchases-list');
-                aP.innerHTML = archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            const aP = document.getElementById('archive-purchases-list');
+            aP.innerHTML = archivePurchases && archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            if(archivePurchases) {
                 archivePurchases.forEach(item => {
                     let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
                     aP.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b><div class="archive-date">${item.date}</div></div>`;
@@ -1242,15 +1249,27 @@
             document.querySelectorAll('.admin-nav-btn').forEach(el => el.classList.remove('active'));
             document.getElementById('admin-sub-main').classList.add('hidden');
             document.getElementById('admin-sub-archive').classList.add('hidden');
-            if(tab === 'main') { document.getElementById('btn-adm-main').classList.add('active'); document.getElementById('admin-sub-main').classList.remove('hidden'); } 
-            else { document.getElementById('btn-adm-archive').classList.add('active'); document.getElementById('admin-sub-archive').classList.remove('hidden'); }
+            document.getElementById('admin-sub-settings').classList.add('hidden');
+            
+            if(tab === 'main') { 
+                document.getElementById('btn-adm-main').classList.add('active'); 
+                document.getElementById('admin-sub-main').classList.remove('hidden'); 
+            } else if(tab === 'archive') { 
+                document.getElementById('btn-adm-archive').classList.add('active'); 
+                document.getElementById('admin-sub-archive').classList.remove('hidden'); 
+            } else if(tab === 'settings') { 
+                document.getElementById('btn-adm-settings').classList.add('active'); 
+                document.getElementById('admin-sub-settings').classList.remove('hidden'); 
+            }
         }
 
+        // --- ВХОД В АДМИНКУ ---
         function checkPin() {
             if(document.getElementById('parent-pin').value === PIN) {
                 isUnlocked = true;
                 document.getElementById('parent-lock').classList.add('hidden');
                 document.getElementById('parent-admin').classList.remove('hidden');
+                switchAdminSub('main'); // По умолчанию открываем управление
                 resetAutoLogoutTimer(); 
                 syncWithCloud();
             } else { 
