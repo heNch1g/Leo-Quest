@@ -206,7 +206,7 @@
                 </div>
             </div>
             
-            <div class="sidebar-version">v1.3.0</div>
+            <div class="sidebar-version">v1.3.1</div>
         </aside>
 
         <!-- ПРАВАЯ ПАНЕЛЬ -->
@@ -379,7 +379,7 @@
                 </div>
             </div>
 
-            <div class="app-version-footer content-version">v1.3.0</div>
+            <div class="app-version-footer content-version">v1.3.1</div>
         </main>
 
         <!-- МОДАЛКИ (Всплывающие окна) -->
@@ -738,8 +738,6 @@
             const shop = state.shop || [];
             const purchases = state.purchases || [];
             const lootboxPool = state.lootboxPool || [];
-            const archiveQuests = state.archiveQuests || [];
-            const archivePurchases = state.archivePurchases || [];
 
             // Профиль
             document.getElementById('hero-name').innerText = state.childName || "Герой";
@@ -913,23 +911,22 @@
         }
 
         function renderArchives() {
+            const archiveQuests = state.archiveQuests || [];
+            const archivePurchases = state.archivePurchases || [];
+            
             const aQ = document.getElementById('archive-quests-list');
-            aQ.innerHTML = archiveQuests && archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
-            if(archiveQuests) {
-                archiveQuests.forEach(item => {
-                    let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
-                    aQ.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b> (+✨${item.xp} | +🪙${item.coins})<div class="archive-date">${item.date}</div></div>`;
-                });
-            }
+            aQ.innerHTML = archiveQuests.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            archiveQuests.forEach(item => {
+                let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
+                aQ.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b> (+✨${item.xp} | +🪙${item.coins})<div class="archive-date">${item.date}</div></div>`;
+            });
 
             const aP = document.getElementById('archive-purchases-list');
-            aP.innerHTML = archivePurchases && archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
-            if(archivePurchases) {
-                archivePurchases.forEach(item => {
-                    let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
-                    aP.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b><div class="archive-date">${item.date}</div></div>`;
-                });
-            }
+            aP.innerHTML = archivePurchases.length ? '' : '<p style="font-size:12px;color:gray;">Архив пуст</p>';
+            archivePurchases.forEach(item => {
+                let renderedIcon = item.icon && item.icon.startsWith('http') ? `[Картинка]` : item.icon;
+                aP.innerHTML += `<div class="archive-item"><b>${renderedIcon} ${item.title}</b><div class="archive-date">${item.date}</div></div>`;
+            });
         }
 
         // --- ДЕЙСТВИЯ ---
@@ -1263,13 +1260,12 @@
             }
         }
 
-        // --- ВХОД В АДМИНКУ ---
         function checkPin() {
             if(document.getElementById('parent-pin').value === PIN) {
                 isUnlocked = true;
                 document.getElementById('parent-lock').classList.add('hidden');
                 document.getElementById('parent-admin').classList.remove('hidden');
-                switchAdminSub('main'); // По умолчанию открываем управление
+                switchAdminSub('main'); 
                 resetAutoLogoutTimer(); 
                 syncWithCloud();
             } else { 
